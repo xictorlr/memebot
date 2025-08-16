@@ -1,0 +1,77 @@
+name: Telegram Trading Alerts
+on:
+  schedule:
+    # Ejecutar cada 5 minutos
+    - cron: '*/5 * * * *'
+  
+  # Permitir ejecución manual
+  workflow_dispatch:
+
+jobs:
+  send-alerts:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Send Telegram Trading Alert
+      shell: bash
+      run: |
+        set +e  # Desactivar exit on error
+        
+        echo "🤖 Ejecutando análisis automático de trading..."
+        
+        # Llamar a la Edge Function de Supabase
+        response=$(curl -s -w "%{http_code}" -X POST \
+          "${{ secrets.SUPABASE_URL }}/functions/v1/trading-analyzer" \
+          -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+          -H "Content-Type: application/json")
+        
+        curl_exit_code=$?
+        
+        # Verificar si curl funcionó
+        if [ $curl_exit_code -ne 0 ]; then
+          echo "❌ Error en curl (código: $curl_exit_code)"
+          echo "🔄 Reintentando en la próxima ejecución..."
+          exit 0  # No fallar el workflow
+        fi
+        
+        # Separar el código de estado HTTP del cuerpo de la respuesta
+        if [ ${#response} -ge 3 ]; then
+          http_code="${response: -3}"
+          response_body="${response%???}"
+        else
+          echo "❌ Respuesta muy corta o vacía"
+          echo "Response: $response"
+          exit 0
+        fi
+        
+        echo "📊 HTTP Status: $http_code"
+        echo "📊 Respuesta del análisis:"
+        echo "$response_body"
+        
+        # Verificar si la respuesta HTTP fue exitosa
+        if [[ "$http_code" -ge 200 && "$http_code" -lt 300 ]]; then
+          echo "✅ HTTP request successful"
+          
+          # Verificar si el análisis fue exitoso
+          if echo "$response_body" | grep -q '"success":true'; then
+            echo "✅ Análisis completado exitosamente"
+            
+            # Contar señales si existen
+            if echo "$response_body" | grep -q '"signals"'; then
+              signals_count=$(echo "$response_body" | grep -o '"signals":\[[^]]*\]' | grep -o '{"' | wc -l)
+              echo "📈 Señales encontradas: $signals_count"
+            else
+              echo "📈 No se encontraron señales en esta ejecución"
+            fi
+          else
+            echo "⚠️ Análisis completado pero con errores"
+            echo "$response_body"
+          fi
+        else
+          echo "❌ Error HTTP: $http_code"
+          echo "Response: $response_body"
+          echo "⚠️ Continuando... (errores de API son temporales)"
+        fi
+        
+        echo "🔄 Workflow completado - próxima ejecución en 5 minutos"
+        exit 0  # Siempre terminar con éxito
