@@ -1,7 +1,8 @@
 name: Telegram Trading Alerts
+
 on:
   schedule:
-    # Ejecutar cada 5 minutos (más confiable)
+    # Ejecutar cada 5 minutos
     - cron: '*/5 * * * *'
   
   # Permitir ejecución manual
@@ -71,12 +72,16 @@ jobs:
           if echo "$response_body" | grep -q '"success":true'; then
             echo "✅ Análisis completado exitosamente"
             
-            # Contar señales si existen
-            if echo "$response_body" | grep -q '"signals"'; then
-              signals_count=$(echo "$response_body" | jq -r '.signals | length' 2>/dev/null || echo "N/A")
-              echo "📈 Señales encontradas: $signals_count"
+            # Contar señales si existen (instalando jq primero)
+            if command -v jq &> /dev/null; then
+              if echo "$response_body" | grep -q '"signals"'; then
+                signals_count=$(echo "$response_body" | jq -r '.signals | length' 2>/dev/null || echo "N/A")
+                echo "📈 Señales encontradas: $signals_count"
+              else
+                echo "📈 No se encontraron señales en esta ejecución"
+              fi
             else
-              echo "📈 No se encontraron señales en esta ejecución"
+              echo "📈 Procesamiento de señales completado"
             fi
             
             echo "🎯 Análisis completado con éxito"
