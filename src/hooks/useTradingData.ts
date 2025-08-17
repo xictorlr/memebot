@@ -1,14 +1,13 @@
 import { useState, useEffect } from 'react';
 import { TradingAPI } from '../services/api';
+import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
 import { useUserProfile } from './useUserProfile';
-import { useTradingHistory } from './useTradingHistory';
 import type { Memecoin, TradingSignal, Alert } from '../types';
 
 export function useTradingData() {
   const { user } = useAuth();
   const { profile } = useUserProfile();
-  const { saveAction } = useTradingHistory();
   const [memecoins, setMemecoins] = useState<Memecoin[]>([]);
   const [signals, setSignals] = useState<TradingSignal[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
@@ -58,29 +57,8 @@ export function useTradingData() {
       const newSignals = api.generateTradingSignals(coinData);
       console.log(`🎯 Generated ${newSignals.length} new signals`);
       
-      // Save signals to database only if user is authenticated
-      // Save all signals to database (public data)
-      for (const signal of newSignals) {
-        // Find the corresponding coin data for market metrics
-        const coinData = memecoins.find(coin => 
-          coin.symbol.toLowerCase() === signal.coin.toLowerCase() ||
-          coin.id.toLowerCase() === signal.coin.toLowerCase()
-        );
-        
-        await saveAction({
-          coin_id: signal.coin.toLowerCase(),
-          symbol: signal.coin,
-          action: signal.type,
-          price: signal.price,
-          confidence: Math.round(signal.confidence),
-          reason: signal.reason,
-          market_cap: coinData?.market_cap || 0,
-          volume_24h: coinData?.total_volume || 0,
-          price_change_24h: coinData?.price_change_percentage_24h || 0,
-          rsi: null,
-          volume_spike: (coinData?.total_volume || 0) > 1000000
-        });
-      }
+      // Save signals to database (public data)
+      await saveTradingSignals(newSignals, coinData);
       
       setSignals(prev => [...newSignals, ...prev].slice(0, 50)); // Keep last 50 signals
       
