@@ -135,14 +135,9 @@ export function useTradingHistory() {
 
   const saveAction = async (action: Omit<TradingAction, 'id' | 'created_at'>) => {
     try {
-      // Prepare the action data
-      const actionData = user 
-        ? { ...action, user_id: user.id }  // Add user_id if authenticated
-        : action;  // Allow system actions without user_id
-
       const { data, error } = await supabase
         .from('trading_actions')
-        .insert(actionData)
+        .insert(action)
         .select()
         .single();
 
@@ -154,8 +149,8 @@ export function useTradingHistory() {
       // Update local state
       setActions(prev => [data, ...prev]);
       
-      // Only track performance for authenticated users
-      if (user) {
+      // Track performance for authenticated users
+      if (user && (action.action === 'buy' || action.action === 'sell')) {
         await updatePerformanceTracking(action);
       }
       
