@@ -12,15 +12,13 @@
     - Returns clean JSON response to frontend
 */
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -39,20 +37,33 @@ serve(async (req) => {
       );
     }
 
+    // Validate that the target URL is from CoinGecko
+    if (!targetUrl.includes('api.coingecko.com')) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid target URL' }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
     console.log('Fetching from CoinGecko:', targetUrl);
     
     const response = await fetch(targetUrl, {
       headers: {
         'Accept': 'application/json',
-        'User-Agent': 'MemeBot-Trading-App/1.0'
+        'User-Agent': 'MemeBot-Trading-App/1.0.3'
       }
     });
 
     if (!response.ok) {
+      console.error(`CoinGecko API error: ${response.status} ${response.statusText}`);
       throw new Error(`CoinGecko API error: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
+    console.log('Successfully fetched data from CoinGecko');
     
     return new Response(
       JSON.stringify(data),
@@ -66,7 +77,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         error: 'Failed to fetch data from CoinGecko',
-        message: error.message
+        message: error.message,
+        fallback: 'Using demo data instead'
       }),
       {
         status: 500,

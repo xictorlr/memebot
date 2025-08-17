@@ -163,20 +163,34 @@ export class TradingAPI {
     try {
       const targetUrl = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${MEMECOIN_IDS.join(',')}&order=market_cap_desc&per_page=50&page=1&sparkline=false&price_change_percentage=24h,7d`;
       
+      // Check if Supabase environment variables are configured
+      if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+        console.warn('Supabase environment variables not configured, using fallback data');
+        return this.getFallbackData();
+      }
+
       // Use Supabase Edge Function as proxy
       const proxyUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/coingecko-proxy?url=${encodeURIComponent(targetUrl)}`;
       
       const response = await fetch(proxyUrl, {
         headers: {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json'
         }
       });
       
       if (!response.ok) {
+        console.error(`Proxy request failed: ${response.status} ${response.statusText}`);
         throw new Error('Failed to fetch memecoin data');
       }
       
       const coinData = await response.json();
+      
+      // Check if the response contains an error from the edge function
+      if (coinData.error) {
+        console.warn('Edge function returned error:', coinData.error);
+        throw new Error(coinData.message || 'Edge function error');
+      }
       
       // Ensure coinData is an array before filtering
       if (!Array.isArray(coinData)) {
