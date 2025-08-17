@@ -20,6 +20,8 @@ export function useTradingData() {
   // Function to save trading signals to database
   const saveTradingSignals = async (signals: TradingSignal[], coinData: Memecoin[]) => {
     try {
+      console.log(`💾 Intentando guardar ${signals.length} señales en base de datos...`);
+      
       const actions = signals.map(signal => {
         // Find the corresponding coin data for market metrics
         const coin = coinData.find(c => 
@@ -27,7 +29,7 @@ export function useTradingData() {
           c.id.toLowerCase() === signal.coin.toLowerCase()
         );
         
-        return {
+        const action = {
           coin_id: signal.coin.toLowerCase(),
           symbol: signal.coin,
           action: signal.type,
@@ -40,19 +42,39 @@ export function useTradingData() {
           rsi: null,
           volume_spike: (coin?.total_volume || coin?.volume_24h || 0) > 1000000
         };
+        
+        console.log(`📊 Preparando señal: ${action.symbol} ${action.action} $${action.price} (${action.confidence}%)`);
+        return action;
       });
 
+      console.log(`🔄 Insertando ${actions.length} acciones en trading_actions...`);
+      
       const { error } = await supabase
         .from('trading_actions')
         .insert(actions);
 
       if (error) {
-        console.error('❌ Error saving trading signals:', error);
+        console.error('❌ Error guardando señales:', error.message);
+        console.error('❌ Detalles del error:', error);
       } else {
-        console.log(`✅ Saved ${actions.length} trading signals to database`);
+        console.log(`✅ GUARDADO EXITOSO: ${actions.length} señales en base de datos`);
+        
+        // Verificar que se guardaron
+        const { data: savedData, error: checkError } = await supabase
+          .from('trading_actions')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(actions.length);
+          
+        if (!checkError && savedData) {
+          console.log(`✅ VERIFICADO: ${savedData.length} señales guardadas correctamente`);
+          savedData.forEach(action => {
+            console.log(`   - ${action.symbol} ${action.action} $${action.price} (${action.confidence}%)`);
+          });
+        }
       }
     } catch (error) {
-      console.error('❌ Error in saveTradingSignals:', error);
+      console.error('❌ Error crítico en saveTradingSignals:', error);
     }
   };
 
@@ -87,6 +109,8 @@ export function useTradingData() {
   const fetchData = async () => {
     try {
       setLoading(true);
+      console.log('🔄 Iniciando fetchData...');
+      
       const coinData = await api.getMemecoins();
       setMemecoins(coinData);
       
@@ -96,8 +120,13 @@ export function useTradingData() {
       const newSignals = api.generateTradingSignals(coinData);
       console.log(`🎯 Generated ${newSignals.length} new signals`);
       
-      // Save signals to database (public data)
-      await saveTradingSignals(newSignals, coinData);
+      // Save signals to database ONLY if we have signals
+      if (newSignals.length > 0) {
+        console.log(`💾 Guardando ${newSignals.length} señales en base de datos...`);
+        await saveTradingSignals(newSignals, coinData);
+      } else {
+        console.log('⚠️ No hay señales para guardar en esta iteración');
+      }
       
       setSignals(prev => [...newSignals, ...prev].slice(0, 50)); // Keep last 50 signals
       

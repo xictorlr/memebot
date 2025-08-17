@@ -285,6 +285,12 @@ export class TradingAPI {
     }
     
     console.log(`🎯 Generated ${signals.length} trading signals from ${memecoins.length} coins`);
+    
+    // Log each signal for debugging
+    signals.forEach((signal, index) => {
+      console.log(`   ${index + 1}. ${signal.coin} ${signal.type} $${signal.price.toFixed(6)} (${signal.confidence}%) - ${signal.reason}`);
+    });
+    
     return signals;
   }
 
