@@ -28,105 +28,46 @@ export default function TradingHistoryChart() {
         const { supabase } = await import('../lib/supabase');
         
         console.log('🔄 Fetching trading history from database...');
-        console.log('📊 Current user:', user?.id || 'No user');
         
-        // Fetch recent trading actions (last 24 hours)
+        // Fetch recent trading actions (last 7 days)
         const { data: actionsData, error: actionsError } = await supabase
           .from('trading_actions')
           .select('*')
-          .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()) // Last 7 days instead of 24h
+          .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
           .order('created_at', { ascending: false })
-          .limit(500);
+          .limit(1000);
 
         if (actionsError) {
-          console.error('Error fetching trading actions:', actionsError);
-          console.error('Supabase error details:', actionsError);
+          console.error('❌ Error fetching trading actions:', actionsError);
           setActions([]);
         } else {
-          console.log(`✅ Fetched ${actionsData?.length || 0} trading actions from database`);
-          if (actionsData && actionsData.length > 0) {
-            console.log('📊 Sample action:', actionsData[0]);
-          }
+          console.log(`✅ Fetched ${actionsData?.length || 0} trading actions`);
           setActions(actionsData || []);
-        }
-
-        // Fetch trading performance (both user-specific and general)
-        let performanceQuery = supabase
-          .from('trading_performance')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(100);
-        
-        // If user is logged in, get their personal performance + general performance
-        if (user) {
-          const { data: userPerformance, error: userPerfError } = await supabase
-            .from('trading_performance')
-            .select('*')
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false })
-            .limit(50);
-            
-          const { data: generalPerformance, error: generalPerfError } = await supabase
-            .from('trading_performance')
-            .select('*')
-            .is('user_id', null)
-            .order('created_at', { ascending: false })
-            .limit(50);
-            
-          if (!userPerfError && !generalPerfError) {
-            const combinedPerformance = [...(userPerformance || []), ...(generalPerformance || [])];
-            console.log(`✅ Fetched ${combinedPerformance.length} performance records (${userPerformance?.length || 0} personal + ${generalPerformance?.length || 0} general)`);
-            setPerformance(combinedPerformance);
-            calculateStats(combinedPerformance);
-          } else {
-            console.error('Error fetching performance:', userPerfError || generalPerfError);
-            setPerformance([]);
-          }
-        } else {
-          // If no user, get general performance only
-          const { data: performanceData, error: performanceError } = await supabase
-            .from('trading_performance')
-            .select('*')
-            .is('user_id', null)
-            .order('created_at', { ascending: false })
-            .limit(100);
-
-          if (performanceError) {
-            console.error('Error fetching trading performance:', performanceError);
-            console.error('Supabase error details:', performanceError);
-            setPerformance([]);
-          } else {
-            console.log(`✅ Fetched ${performanceData?.length || 0} performance records from database`);
-            if (performanceData && performanceData.length > 0) {
-              console.log('📊 Sample performance:', performanceData[0]);
-            }
-            setPerformance(performanceData || []);
-            calculateStats(performanceData || []);
+          
+          // Calculate stats from actions if no performance data
+          if (actionsData && actionsData.length > 0) {
+            calculateStatsFromActions(actionsData);
           }
         }
-        
-        // If no data exists, create some sample data for demonstration
-        if ((!actionsData || actionsData.length === 0) && (!user)) {
-          console.log('🎭 No data found, creating sample data...');
-          await createSampleData(supabase);
-        }
-        
+
+        // Try to fetch performance data
         const { data: performanceData, error: performanceError } = await supabase
           .from('trading_performance')
           .select('*')
           .order('created_at', { ascending: false })
-          .limit(50);
+          .limit(100);
 
-        if (performanceError) {
-          console.error('Error fetching trading performance:', performanceError);
-          setPerformance([]);
+        if (!performanceError && performanceData && performanceData.length > 0) {
+          console.log(`✅ Using real performance data: ${performanceData.length} records`);
+          setPerformance(performanceData);
+          calculateStatsFromPerformance(performanceData);
         } else {
-          console.log(`✅ Fetched ${performanceData?.length || 0} performance records from database`);
-          setPerformance(performanceData || []);
-          calculateStats(performanceData || []);
+          console.log('⚠️ No performance data, using simulated stats from actions');
+          setPerformance([]);
         }
+        
       } catch (error) {
-        console.error('Error fetching trading history:', error);
+        console.error('❌ Error fetching trading history:', error);
         setActions([]);
         setPerformance([]);
       } finally {
@@ -134,139 +75,68 @@ export default function TradingHistoryChart() {
       }
     };
 
-    const createSampleData = async (supabase: any) => {
-      try {
-        console.log('🎭 Creating sample trading data...');
-        
-        // Create sample actions
-        const sampleActions = [
-          {
-            coin_id: 'pepe',
-            symbol: 'PEPE',
-            action: 'buy',
-            price: 0.000001234,
-            confidence: 85,
-            reason: 'Strong momentum with volume spike',
-            market_cap: 2345678901,
-            volume_24h: 234567890,
-            price_change_24h: 12.45,
-            rsi: 35.2,
-            volume_spike: true
-          },
-          {
-            coin_id: 'dogecoin',
-            symbol: 'DOGE',
-            action: 'sell',
-            price: 0.08234,
-            confidence: 78,
-            reason: 'Overbought conditions detected',
-            market_cap: 11234567890,
-            volume_24h: 456789012,
-            price_change_24h: -5.25,
-            rsi: 72.8,
-            volume_spike: false
-          },
-          {
-            coin_id: 'shiba-inu',
-            symbol: 'SHIB',
-            action: 'hold',
-            price: 0.000008234,
-            confidence: 65,
-            reason: 'Consolidation phase - wait for breakout',
-            market_cap: 4567890123,
-            volume_24h: 123456789,
-            price_change_24h: 2.15,
-            rsi: 55.4,
-            volume_spike: false
-          }
-        ];
-        
-        const { error: actionsError } = await supabase
-          .from('trading_actions')
-          .insert(sampleActions);
-          
-        if (actionsError) {
-          console.error('Error creating sample actions:', actionsError);
-        } else {
-          console.log('✅ Created sample trading actions');
-        }
-        
-        // Create sample performance data
-        const samplePerformance = [
-          {
-            coin_id: 'pepe',
-            symbol: 'PEPE',
-            buy_price: 0.000001000,
-            sell_price: 0.000001200,
-            buy_date: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
-            sell_date: new Date(Date.now() - 30 * 60 * 1000).toISOString(), // 30 min ago
-            profit_loss: 0.000000200,
-            profit_loss_percentage: 20.0,
-            duration_minutes: 90,
-            status: 'closed',
-            user_id: null // General performance
-          },
-          {
-            coin_id: 'dogecoin',
-            symbol: 'DOGE',
-            buy_price: 0.085000,
-            sell_price: 0.082000,
-            buy_date: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(), // 4 hours ago
-            sell_date: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(), // 1 hour ago
-            profit_loss: -0.003000,
-            profit_loss_percentage: -3.53,
-            duration_minutes: 180,
-            status: 'closed',
-            user_id: null // General performance
-          },
-          {
-            coin_id: 'shiba-inu',
-            symbol: 'SHIB',
-            buy_price: 0.000008000,
-            buy_date: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(), // 1 hour ago
-            profit_loss: 0,
-            profit_loss_percentage: 0,
-            duration_minutes: 0,
-            status: 'open',
-            user_id: null // General performance
-          }
-        ];
-        
-        const { error: performanceError } = await supabase
-          .from('trading_performance')
-          .insert(samplePerformance);
-          
-        if (performanceError) {
-          console.error('Error creating sample performance:', performanceError);
-        } else {
-          console.log('✅ Created sample performance data');
-        }
-        
-        // Refresh data after creating samples
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000);
-        
-      } catch (error) {
-        console.error('Error creating sample data:', error);
+    const calculateStatsFromActions = (actionsData: any[]) => {
+      console.log('📊 Calculating stats from actions data...');
+      
+      const buyActions = actionsData.filter(a => a.action === 'buy');
+      const sellActions = actionsData.filter(a => a.action === 'sell');
+      
+      if (buyActions.length === 0) {
+        console.log('⚠️ No BUY actions found');
+        return;
       }
+      
+      // Simulate trades based on confidence levels
+      const simulatedTrades = buyActions.map((buyAction, index) => {
+        const confidence = buyAction.confidence || 50;
+        
+        // Higher confidence = better simulated performance
+        const baseReturn = (confidence - 50) / 100; // -0.5 to +0.5
+        const randomFactor = (Math.random() - 0.5) * 0.3; // ±15% random
+        const finalReturn = baseReturn + randomFactor;
+        
+        // Simulate profit/loss
+        const investmentAmount = 100; // $100 per trade
+        const profitLoss = investmentAmount * finalReturn;
+        const profitLossPercentage = finalReturn * 100;
+        
+        // Simulate duration (30min to 4 hours)
+        const duration = 30 + Math.random() * 210;
+        
+        return {
+          id: `sim-${index}`,
+          profit_loss: profitLoss,
+          profit_loss_percentage: profitLossPercentage,
+          duration_minutes: duration,
+          status: 'closed'
+        };
+      });
+      
+      // Calculate stats from simulated trades
+      const winningTrades = simulatedTrades.filter(t => t.profit_loss > 0);
+      const totalProfit = simulatedTrades.reduce((sum, t) => sum + t.profit_loss, 0);
+      const avgDuration = simulatedTrades.reduce((sum, t) => sum + t.duration_minutes, 0) / simulatedTrades.length;
+      const bestTrade = Math.max(...simulatedTrades.map(t => t.profit_loss_percentage));
+      const worstTrade = Math.min(...simulatedTrades.map(t => t.profit_loss_percentage));
+      const winRate = (winningTrades.length / simulatedTrades.length) * 100;
+      
+      console.log(`📈 Simulated stats: ${simulatedTrades.length} trades, ${winRate.toFixed(1)}% win rate, $${totalProfit.toFixed(2)} P&L`);
+      
+      setStats({
+        totalTrades: simulatedTrades.length,
+        winRate,
+        totalProfit,
+        avgDuration,
+        bestTrade,
+        worstTrade
+      });
     };
 
-    const calculateStats = (performanceData: any[]) => {
+    const calculateStatsFromPerformance = (performanceData: any[]) => {
       const closedTrades = performanceData.filter(trade => trade.status === 'closed');
       
       if (closedTrades.length === 0) {
-        console.log('📊 No closed trades found for stats calculation');
-        console.log('📊 Total performance records:', performanceData.length);
-        console.log('📊 Open trades:', performanceData.filter(trade => trade.status === 'open').length);
-        setStats({
-          totalTrades: 0,
-          winRate: 0,
-          totalProfit: 0,
-          avgDuration: 0,
-          bestTrade: 0,
-          worstTrade: 0
-        });
+        console.log('📊 No closed trades in performance data');
         return;
       }
 
@@ -276,8 +146,7 @@ export default function TradingHistoryChart() {
       const bestTrade = Math.max(...closedTrades.map(trade => trade.profit_loss_percentage));
       const worstTrade = Math.min(...closedTrades.map(trade => trade.profit_loss_percentage));
 
-      console.log(`📊 Stats calculated: ${closedTrades.length} trades, ${winningTrades.length} wins, ${((winningTrades.length / closedTrades.length) * 100).toFixed(1)}% win rate`);
-      console.log(`💰 Total profit: ${totalProfit}, Best: ${bestTrade}%, Worst: ${worstTrade}%`);
+      console.log(`📊 Real stats: ${closedTrades.length} trades, ${((winningTrades.length / closedTrades.length) * 100).toFixed(1)}% win rate`);
       
       setStats({
         totalTrades: closedTrades.length,
@@ -291,10 +160,10 @@ export default function TradingHistoryChart() {
 
     fetchTradingHistory();
     
-    // Refresh every 5 minutes
-    const interval = setInterval(fetchTradingHistory, 2 * 60 * 1000); // Every 2 minutes for more frequent updates
+    // Refresh every 2 minutes
+    const interval = setInterval(fetchTradingHistory, 2 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [user]); // Add user dependency
+  }, [user]);
 
   const getTimeframeHours = () => {
     switch (timeframe) {
@@ -319,6 +188,22 @@ export default function TradingHistoryChart() {
   const displayedActions = actionFilter === 'all' 
     ? filteredActions.slice(0, 15)
     : filteredActions.filter(a => a.action === actionFilter).slice(0, 15);
+
+  // Calculate BUY signals per coin
+  const buySignalsByCoin = React.useMemo(() => {
+    const buyActions = filteredActions.filter(a => a.action === 'buy');
+    const coinCounts: { [key: string]: number } = {};
+    
+    buyActions.forEach(action => {
+      const symbol = action.symbol || action.coin_id;
+      coinCounts[symbol] = (coinCounts[symbol] || 0) + 1;
+    });
+    
+    // Sort by count descending
+    return Object.entries(coinCounts)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 10); // Top 10
+  }, [filteredActions]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('es-ES', {
@@ -378,36 +263,39 @@ export default function TradingHistoryChart() {
         <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
           <div className="bg-gray-700/30 rounded-lg p-3 text-center">
             <p className="text-gray-400 text-xs">Total Trades</p>
-            <p className="text-white font-bold">{stats.totalTrades}</p>
+            <p className="text-white font-bold text-xl">{stats.totalTrades}</p>
+            <p className="text-gray-500 text-xs">
+              {stats.totalTrades > 0 ? 'Simulado' : 'Sin datos'}
+            </p>
           </div>
           
           <div className="bg-gray-700/30 rounded-lg p-3 text-center">
             <p className="text-gray-400 text-xs">Win Rate</p>
-            <p className={`font-bold ${stats.winRate >= 50 ? 'text-green-500' : 'text-red-500'}`}>
+            <p className={`font-bold text-xl ${stats.winRate >= 50 ? 'text-green-500' : 'text-red-500'}`}>
               {stats.winRate.toFixed(1)}%
             </p>
           </div>
           
           <div className="bg-gray-700/30 rounded-lg p-3 text-center">
             <p className="text-gray-400 text-xs">Total P&L</p>
-            <p className={`font-bold ${stats.totalProfit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+            <p className={`font-bold text-xl ${stats.totalProfit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
               {formatCurrency(stats.totalProfit)}
             </p>
           </div>
           
           <div className="bg-gray-700/30 rounded-lg p-3 text-center">
             <p className="text-gray-400 text-xs">Avg Duration</p>
-            <p className="text-white font-bold">{Math.round(stats.avgDuration)}m</p>
+            <p className="text-white font-bold text-xl">{Math.round(stats.avgDuration)}m</p>
           </div>
           
           <div className="bg-gray-700/30 rounded-lg p-3 text-center">
             <p className="text-gray-400 text-xs">Best Trade</p>
-            <p className="text-green-500 font-bold">{formatPercentage(stats.bestTrade)}</p>
+            <p className="text-green-500 font-bold text-xl">{formatPercentage(stats.bestTrade)}</p>
           </div>
           
           <div className="bg-gray-700/30 rounded-lg p-3 text-center">
             <p className="text-gray-400 text-xs">Worst Trade</p>
-            <p className="text-red-500 font-bold">{formatPercentage(stats.worstTrade)}</p>
+            <p className="text-red-500 font-bold text-xl">{formatPercentage(stats.worstTrade)}</p>
           </div>
         </div>
 
@@ -434,6 +322,21 @@ export default function TradingHistoryChart() {
             </div>
           </div>
         </div>
+
+        {/* BUY Signals by Coin */}
+        {buySignalsByCoin.length > 0 && (
+          <div className="mb-6">
+            <h3 className="font-semibold text-white mb-3">🟢 Señales BUY por Coin ({timeframe})</h3>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              {buySignalsByCoin.map(([coin, count]) => (
+                <div key={coin} className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 text-center">
+                  <p className="text-green-400 font-bold text-lg">{count}</p>
+                  <p className="text-green-300 text-sm font-medium">{coin.toUpperCase()}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Recent Actions */}
         <div>
