@@ -1,10 +1,88 @@
 import React, { useState } from 'react';
 import { BarChart3, TrendingUp, TrendingDown, Clock, Target, DollarSign } from 'lucide-react';
-import { useTradingHistory } from '../hooks/useTradingHistory';
 
 export default function TradingHistoryChart() {
-  const { actions, performance, stats, loading } = useTradingHistory();
+  const [actions, setActions] = useState([]);
+  const [performance, setPerformance] = useState([]);
+  const [stats, setStats] = useState({
+    totalTrades: 0,
+    winRate: 0,
+    totalProfit: 0,
+    avgDuration: 0,
+    bestTrade: 0,
+    worstTrade: 0
+  });
+  const [loading, setLoading] = useState(false);
   const [timeframe, setTimeframe] = useState<'1h' | '6h' | '24h'>('24h');
+
+  // Fetch data from Supabase
+  React.useEffect(() => {
+    const fetchTradingHistory = async () => {
+      try {
+        setLoading(true);
+        
+        // Import supabase client
+        const { supabase } = await import('../lib/supabase');
+        
+        // Fetch recent trading actions (last 24 hours)
+        const { data: actionsData, error: actionsError } = await supabase
+          .from('trading_actions')
+          .select('*')
+          .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+          .order('created_at', { ascending: false })
+          .limit(100);
+
+        if (actionsError) {
+          console.error('Error fetching trading actions:', actionsError);
+        } else {
+          setActions(actionsData || []);
+        }
+
+        // Fetch trading performance
+        const { data: performanceData, error: performanceError } = await supabase
+          .from('trading_performance')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(50);
+
+        if (performanceError) {
+          console.error('Error fetching trading performance:', performanceError);
+        } else {
+          setPerformance(performanceData || []);
+          
+          // Calculate stats
+          const closedTrades = (performanceData || []).filter(trade => trade.status === 'closed');
+          
+          if (closedTrades.length > 0) {
+            const winningTrades = closedTrades.filter(trade => trade.profit_loss > 0);
+            const totalProfit = closedTrades.reduce((sum, trade) => sum + trade.profit_loss, 0);
+            const avgDuration = closedTrades.reduce((sum, trade) => sum + trade.duration_minutes, 0) / closedTrades.length;
+            const bestTrade = Math.max(...closedTrades.map(trade => trade.profit_loss_percentage));
+            const worstTrade = Math.min(...closedTrades.map(trade => trade.profit_loss_percentage));
+
+            setStats({
+              totalTrades: closedTrades.length,
+              winRate: (winningTrades.length / closedTrades.length) * 100,
+              totalProfit,
+              avgDuration,
+              bestTrade,
+              worstTrade
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching trading history:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTradingHistory();
+    
+    // Refresh every 5 minutes
+    const interval = setInterval(fetchTradingHistory, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const getTimeframeHours = () => {
     switch (timeframe) {
