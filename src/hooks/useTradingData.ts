@@ -161,8 +161,7 @@ export function useTradingData() {
       
       // Check if environment variables are configured
       if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
-        console.error('❌ Supabase environment variables not configured');
-        console.error('Please check your .env file and ensure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set');
+        console.warn('⚠️ Supabase environment variables not configured - skipping analysis');
         return;
       }
       
@@ -180,8 +179,7 @@ export function useTradingData() {
       
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`❌ Edge function returned ${response.status}: ${response.statusText}`);
-        console.error('Response:', errorText);
+        console.warn(`⚠️ Edge function returned ${response.status}: ${response.statusText}`);
         throw new Error(`Edge function error: ${response.status} ${response.statusText}`);
       }
       
@@ -191,19 +189,10 @@ export function useTradingData() {
         console.log(`✅ Análisis automático completado: ${result.signals?.length || 0} señales`);
         setLastTelegramAnalysis(new Date());
       } else {
-        console.error('❌ Error en análisis automático:', result.error);
+        console.warn('⚠️ Error en análisis automático:', result.error);
       }
     } catch (error) {
-      console.error('❌ Error ejecutando análisis automático:', error);
-      
-      // Provide more specific error information
-      if (error.message === 'Failed to fetch') {
-        console.error('🔧 Troubleshooting steps:');
-        console.error('1. Check your .env file has VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY');
-        console.error('2. Verify the trading-analyzer Edge Function is deployed in Supabase');
-        console.error('3. Check your internet connection');
-        console.error('4. Restart the development server after changing .env');
-      }
+      console.warn('⚠️ Análisis automático no disponible:', error.message);
     }
   };
   const fetchData = async () => {
