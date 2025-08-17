@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { BarChart3, TrendingUp, TrendingDown, Clock, Target, DollarSign } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
 
 export default function TradingHistoryChart() {
+  const { user } = useAuth();
   const [actions, setActions] = useState([]);
   const [performance, setPerformance] = useState([]);
   const [stats, setStats] = useState({
