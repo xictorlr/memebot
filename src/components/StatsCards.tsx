@@ -170,6 +170,10 @@ export default function StatsCards({ memecoins, signals }: StatsCardsProps) {
                   </a>
                       <p className="text-white font-mono text-sm">
                         {formatCurrency(coin.volume_24h || 0)}
+                      </p>
+                    </div>
+                    
+                    <div>
                     <a 
                       href={`https://www.coingecko.com/en/coins/${coin.id}`}
                       target="_blank"
@@ -179,6 +183,7 @@ export default function StatsCards({ memecoins, signals }: StatsCardsProps) {
                       <h3 className="font-semibold text-white">{coin.name}</h3>
                     </a>
                     <p className="text-gray-400 text-sm uppercase">{coin.symbol}</p>
+                  </div>
                   </div>
                 ))}
               </div>
