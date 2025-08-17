@@ -72,6 +72,29 @@ export function useTradingData() {
             console.log(`   - ${action.symbol} ${action.action} $${action.price} (${action.confidence}%)`);
           });
         }
+        
+        // Also save general performance tracking (without user_id for public stats)
+        const performanceEntries = actions
+          .filter(action => action.action === 'buy')
+          .map(action => ({
+            coin_id: action.coin_id,
+            symbol: action.symbol,
+            buy_price: action.price,
+            buy_date: new Date().toISOString(),
+            status: 'open'
+          }));
+          
+        if (performanceEntries.length > 0) {
+          const { error: perfError } = await supabase
+            .from('trading_performance')
+            .insert(performanceEntries);
+            
+          if (perfError) {
+            console.error('❌ Error guardando performance general:', perfError);
+          } else {
+            console.log(`✅ Guardadas ${performanceEntries.length} entradas de performance general`);
+          }
+        }
       }
     } catch (error) {
       console.error('❌ Error crítico en saveTradingSignals:', error);

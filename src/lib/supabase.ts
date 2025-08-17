@@ -107,6 +107,7 @@ export type Database = {
       portfolio_entries: {
         Row: {
           id: string
+          user_id: string | null
           user_id: string
           coin_id: string
           symbol: string
@@ -158,6 +159,7 @@ export type Database = {
         }
         Insert: {
           id?: string
+          user_id?: string | null
           user_id: string
           coin_id: string
           alert_type: 'price' | 'volume' | 'signal' | 'news'
@@ -168,6 +170,7 @@ export type Database = {
         }
         Update: {
           id?: string
+          user_id?: string | null
           user_id?: string
           coin_id?: string
           alert_type?: 'price' | 'volume' | 'signal' | 'news'
