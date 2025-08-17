@@ -17,6 +17,45 @@ export function useTradingData() {
 
   const api = TradingAPI.getInstance();
 
+  // Function to save trading signals to database
+  const saveTradingSignals = async (signals: TradingSignal[], coinData: Memecoin[]) => {
+    try {
+      const actions = signals.map(signal => {
+        // Find the corresponding coin data for market metrics
+        const coin = coinData.find(c => 
+          c.symbol.toLowerCase() === signal.coin.toLowerCase() ||
+          c.id.toLowerCase() === signal.coin.toLowerCase()
+        );
+        
+        return {
+          coin_id: signal.coin.toLowerCase(),
+          symbol: signal.coin,
+          action: signal.type,
+          price: signal.price,
+          confidence: Math.round(signal.confidence),
+          reason: signal.reason,
+          market_cap: coin?.market_cap || 0,
+          volume_24h: coin?.total_volume || coin?.volume_24h || 0,
+          price_change_24h: coin?.price_change_percentage_24h || 0,
+          rsi: null,
+          volume_spike: (coin?.total_volume || coin?.volume_24h || 0) > 1000000
+        };
+      });
+
+      const { error } = await supabase
+        .from('trading_actions')
+        .insert(actions);
+
+      if (error) {
+        console.error('❌ Error saving trading signals:', error);
+      } else {
+        console.log(`✅ Saved ${actions.length} trading signals to database`);
+      }
+    } catch (error) {
+      console.error('❌ Error in saveTradingSignals:', error);
+    }
+  };
+
   // Función para ejecutar análisis automático de Telegram
   const runTelegramAnalysis = async () => {
     if (!user || !profile?.alerts_enabled) return;
