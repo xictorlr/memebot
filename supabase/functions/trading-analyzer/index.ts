@@ -513,12 +513,17 @@ class TradingAnalyzer {
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight requests with proper status
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     console.log('🔧 Handling CORS preflight request');
     return new Response(null, {
       status: 200,
-      headers: corsHeaders
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-requested-with',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Max-Age': '86400',
+      }
     });
   }
 
@@ -556,7 +561,12 @@ Deno.serve(async (req) => {
       }),
       {
         status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-requested-with',
+          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+          'Content-Type': 'application/json',
+        },
       }
     );
   } catch (error) {
@@ -570,7 +580,12 @@ Deno.serve(async (req) => {
       }),
       {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-requested-with',
+          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+          'Content-Type': 'application/json',
+        },
       }
     );
   }
