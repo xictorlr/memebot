@@ -513,11 +513,11 @@ class TradingAnalyzer {
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight requests FIRST - before any other logic
+  // Handle CORS preflight requests with proper status
   if (req.method === 'OPTIONS') {
     console.log('🔧 Handling CORS preflight request');
-    return new Response('ok', {
-      status: 204,
+    return new Response(null, {
+      status: 200,
       headers: corsHeaders
     });
   }
