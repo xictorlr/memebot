@@ -34,6 +34,7 @@ export default function TradingHistoryChart() {
 
         if (actionsError) {
           console.error('Error fetching trading actions:', actionsError);
+          setActions([]);
         } else {
           setActions(actionsData || []);
         }
@@ -48,34 +49,57 @@ export default function TradingHistoryChart() {
 
         if (performanceError) {
           console.error('Error fetching trading performance:', performanceError);
+          setPerformance([]);
         } else {
           setPerformance(performanceData || []);
-          
-          // Calculate stats
-          const closedTrades = (performanceData || []).filter(trade => trade.status === 'closed');
-          
-          if (closedTrades.length > 0) {
-            const winningTrades = closedTrades.filter(trade => trade.profit_loss > 0);
-            const totalProfit = closedTrades.reduce((sum, trade) => sum + trade.profit_loss, 0);
-            const avgDuration = closedTrades.reduce((sum, trade) => sum + trade.duration_minutes, 0) / closedTrades.length;
-            const bestTrade = Math.max(...closedTrades.map(trade => trade.profit_loss_percentage));
-            const worstTrade = Math.min(...closedTrades.map(trade => trade.profit_loss_percentage));
-
-            setStats({
-              totalTrades: closedTrades.length,
-              winRate: (winningTrades.length / closedTrades.length) * 100,
-              totalProfit,
-              avgDuration,
-              bestTrade,
-              worstTrade
-            });
-          }
+          calculateStats(performanceData || []);
         }
       } catch (error) {
         console.error('Error fetching trading history:', error);
+        setActions([]);
+        setPerformance([]);
+        setStats({
+          totalTrades: 0,
+          winRate: 0,
+          totalProfit: 0,
+          avgDuration: 0,
+          bestTrade: 0,
+          worstTrade: 0
+        });
       } finally {
         setLoading(false);
       }
+    };
+
+    const calculateStats = (performanceData: any[]) => {
+      const closedTrades = performanceData.filter(trade => trade.status === 'closed');
+      
+      if (closedTrades.length === 0) {
+        setStats({
+          totalTrades: 0,
+          winRate: 0,
+          totalProfit: 0,
+          avgDuration: 0,
+          bestTrade: 0,
+          worstTrade: 0
+        });
+        return;
+      }
+
+      const winningTrades = closedTrades.filter(trade => trade.profit_loss > 0);
+      const totalProfit = closedTrades.reduce((sum, trade) => sum + trade.profit_loss, 0);
+      const avgDuration = closedTrades.reduce((sum, trade) => sum + trade.duration_minutes, 0) / closedTrades.length;
+      const bestTrade = Math.max(...closedTrades.map(trade => trade.profit_loss_percentage));
+      const worstTrade = Math.min(...closedTrades.map(trade => trade.profit_loss_percentage));
+
+      setStats({
+        totalTrades: closedTrades.length,
+        winRate: (winningTrades.length / closedTrades.length) * 100,
+        totalProfit,
+        avgDuration,
+        bestTrade,
+        worstTrade
+      });
     };
 
     fetchTradingHistory();

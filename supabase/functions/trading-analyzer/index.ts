@@ -196,48 +196,73 @@ class TradingAnalyzer {
     const rsi = this.calculateSimpleRSI(priceChange24h, priceChange7d);
     
     // Volume spike detection
-    const volumeSpike = volumeRatio > 0.15; // 15% of market cap in 24h volume
+    const volumeSpike = volumeRatio > 0.05; // 5% of market cap in 24h volume (más sensible)
 
     let action: 'BUY' | 'HOLD' | 'SELL' = 'HOLD';
     let confidence = 50;
     let reason = 'Neutral market conditions';
 
-    // BUY signals
-    if (rsi < 30 && priceChange24h > -5 && volumeSpike) {
+    console.log(`📊 Analizando ${coin.symbol}: precio 24h ${priceChange24h.toFixed(2)}%, volumen ratio ${(volumeRatio * 100).toFixed(2)}%, RSI ${rsi.toFixed(1)}`);
+
+    // BUY signals - Umbrales MUY sensibles
+    if (rsi < 40 && priceChange24h > -10 && volumeSpike) {
+      action = 'BUY';
+      confidence = 90;
+      reason = 'Oversold con pico de volumen - posible reversión';
+    } else if (priceChange24h > 5 && priceChange7d > 10 && volumeSpike) {
       action = 'BUY';
       confidence = 85;
-      reason = 'Oversold with volume spike - potential reversal';
-    } else if (priceChange24h > 15 && priceChange7d > 20 && volumeSpike) {
+      reason = 'Momentum fuerte con alto volumen';
+    } else if (athDistance > -50 && priceChange24h > 3) {
       action = 'BUY';
       confidence = 80;
-      reason = 'Strong momentum with high volume';
-    } else if (athDistance > -30 && priceChange24h > 10) {
+      reason = 'Cerca del ATH con momentum positivo';
+    } else if (priceChange24h > 2 && volumeRatio > 0.03) {
       action = 'BUY';
       confidence = 75;
-      reason = 'Near ATH with positive momentum';
+      reason = 'Movimiento alcista con volumen';
+    } else if (priceChange24h < -8 && priceChange24h > -20 && volumeSpike) {
+      action = 'BUY';
+      confidence = 85;
+      reason = 'Caída fuerte - oportunidad de compra';
     }
 
-    // SELL signals
-    else if (rsi > 70 && priceChange24h < -10) {
+    // SELL signals - Más sensibles
+    else if (rsi > 60 && priceChange24h < -5) {
+      action = 'SELL';
+      confidence = 90;
+      reason = 'Sobrecomprado y cayendo - tomar ganancias';
+    } else if (priceChange24h < -10 && !volumeSpike) {
       action = 'SELL';
       confidence = 85;
-      reason = 'Overbought and declining - take profits';
-    } else if (priceChange24h < -20 && !volumeSpike) {
+      reason = 'Caída fuerte sin soporte de volumen';
+    } else if (athDistance < -80 && priceChange7d < -20) {
       action = 'SELL';
       confidence = 80;
-      reason = 'Heavy decline without volume support';
-    } else if (athDistance < -70 && priceChange7d < -30) {
+      reason = 'Lejos del ATH con declive continuo';
+    } else if (priceChange24h > 20 && rsi > 65) {
       action = 'SELL';
-      confidence = 75;
-      reason = 'Far from ATH with continued decline';
+      confidence = 85;
+      reason = 'Subida excesiva - riesgo de corrección';
     }
 
-    // HOLD signals
-    else if (Math.abs(priceChange24h) < 5 && rsi > 40 && rsi < 60) {
+    // HOLD signals - Más amplios
+    else if (Math.abs(priceChange24h) < 3 && rsi > 35 && rsi < 65) {
+      action = 'HOLD';
+      confidence = 75;
+      reason = 'Acción de precio estable - esperar señal más clara';
+    } else if (volumeRatio > 0.02 && Math.abs(priceChange24h) < 5) {
       action = 'HOLD';
       confidence = 70;
-      reason = 'Stable price action - wait for clearer signal';
+      reason = 'Volumen presente - consolidación activa';
     }
+
+    // Solo retornar señales con confianza > 65%
+    if (confidence < 65) {
+      return null;
+    }
+
+    console.log(`🎯 Señal generada: ${coin.symbol} ${action} (${confidence}%) - ${reason}`);
 
     return {
       coin: coin.symbol.toUpperCase(),
@@ -343,14 +368,14 @@ class TradingAnalyzer {
     message += `📅 ${timestamp}\n\n`;
 
     if (signals.length === 0) {
-      message += `📊 *ANÁLISIS COMPLETADO*\n`;
-      message += `No hay señales fuertes en este momento\\.\n`;
-      message += `Mantén posiciones actuales y espera mejores oportunidades\\.\n\n`;
-      message += `💡 *Tip*: Los mercados laterales son buenos para acumular\\.`;
+      message += `⚠️ *SIN SEÑALES FUERTES*\n`;
+      message += `El mercado está en consolidación\\.\n`;
+      message += `Todas las coins están en rango lateral\\.\n\n`;
+      message += `💡 *Estrategia*: Esperar breakouts o usar DCA\\.`;
       return message;
     }
 
-    message += `🎯 *TOP ${signals.length} SEÑALES*\n\n`;
+    message += `🎯 *${signals.length} SEÑALES DETECTADAS*\n\n`;
 
     signals.forEach((signal, index) => {
       const emoji = signal.action === 'BUY' ? '🟢' : signal.action === 'SELL' ? '🔴' : '🟡';
@@ -373,11 +398,12 @@ class TradingAnalyzer {
       message += `\n`;
     });
 
-    message += `⚠️ *RECORDATORIO*\n`;
-    message += `• Usa stop\\-loss siempre\n`;
-    message += `• No inviertas más del 5% por trade\n`;
-    message += `• DYOR \\- Esto es solo análisis técnico\n\n`;
-    message += `🔄 Próximo análisis en 1 hora\n`;
+    message += `⚠️ *GESTIÓN DE RIESGO*\n`;
+    message += `• Stop\\-loss: \\-5% máximo\n`;
+    message += `• Take profit: \\+10\\-15%\n`;
+    message += `• Máximo 3\\-5% del capital por trade\n`;
+    message += `• DYOR \\- Solo análisis técnico\n\n`;
+    message += `🔄 Próximo análisis en 5 minutos\n`;
     message += `🌐 Dashboard: https://xictorlrbot\\.com`;
 
     return message;

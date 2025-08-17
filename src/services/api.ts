@@ -231,6 +231,8 @@ export class TradingAPI {
   generateTradingSignals(memecoins: any[]) {
     const signals = [];
     
+    console.log(`🔍 Analizando ${memecoins.length} coins para señales...`);
+    
     for (const coin of memecoins) {
       const priceChange = coin.price_change_percentage_24h || 0;
       const volume = coin.total_volume || coin.volume_24h || 0;
@@ -242,67 +244,101 @@ export class TradingAPI {
       const volumeRatio = volume / marketCap;
       const athDistance = coin.ath_change_percentage || -100;
       
-      // Buy signals - More sensitive thresholds
-      if (priceChange > 5 && volumeRatio > 0.05) {
+      console.log(`📊 ${coin.symbol}: precio ${priceChange.toFixed(2)}%, volumen ${(volumeRatio * 100).toFixed(2)}%, ATH ${athDistance.toFixed(1)}%`);
+      
+      // BUY signals - Umbrales MUY sensibles para detectar oportunidades reales
+      if (priceChange > 2 && volumeRatio > 0.02) {
         signals.push({
           id: `${coin.id}-buy-${Date.now()}`,
           coin: coin.symbol.toUpperCase(),
           type: 'buy' as const,
           price: coin.current_price,
-          confidence: Math.round(Math.min(95, 60 + Math.abs(priceChange) + (volumeRatio * 100))),
-          reason: priceChange > 15 ? 'Strong upward momentum' : 'Positive movement with volume',
+          confidence: Math.round(Math.min(95, 50 + Math.abs(priceChange) * 2 + (volumeRatio * 200))),
+          reason: priceChange > 10 ? 'Fuerte momentum alcista' : 'Movimiento positivo con volumen',
           timestamp: new Date().toISOString(),
           status: 'active' as const
         });
+        console.log(`🟢 BUY signal: ${coin.symbol} - ${priceChange.toFixed(2)}% con volumen`);
       }
-      // More buy conditions
-      else if (priceChange > 3 && athDistance > -30) {
+      // Más condiciones BUY - Recuperación desde mínimos
+      else if (priceChange > 1 && athDistance > -50) {
         signals.push({
           id: `${coin.id}-buy-recovery-${Date.now()}`,
           coin: coin.symbol.toUpperCase(),
           type: 'buy' as const,
           price: coin.current_price,
-          confidence: Math.round(Math.min(85, 55 + Math.abs(priceChange))),
-          reason: 'Recovery from recent lows',
+          confidence: Math.round(Math.min(85, 45 + Math.abs(priceChange) * 3)),
+          reason: 'Recuperación desde mínimos recientes',
           timestamp: new Date().toISOString(),
           status: 'active' as const
         });
+        console.log(`🟢 BUY recovery: ${coin.symbol} - recuperando desde ATH ${athDistance.toFixed(1)}%`);
+      }
+      // BUY por oversold
+      else if (priceChange < -5 && priceChange > -15 && volumeRatio > 0.03) {
+        signals.push({
+          id: `${coin.id}-buy-oversold-${Date.now()}`,
+          coin: coin.symbol.toUpperCase(),
+          type: 'buy' as const,
+          price: coin.current_price,
+          confidence: Math.round(Math.min(90, 60 + Math.abs(priceChange))),
+          reason: 'Oversold - posible rebote',
+          timestamp: new Date().toISOString(),
+          status: 'active' as const
+        });
+        console.log(`🟢 BUY oversold: ${coin.symbol} - caída ${priceChange.toFixed(2)}% con volumen`);
       }
       
-      // Sell signals - More sensitive
-      if (priceChange < -5 && volumeRatio > 0.03) {
+      // SELL signals - Umbrales sensibles
+      if (priceChange < -3 && volumeRatio > 0.02) {
         signals.push({
           id: `${coin.id}-sell-${Date.now()}`,
           coin: coin.symbol.toUpperCase(),
           type: 'sell' as const,
           price: coin.current_price,
-          confidence: Math.round(Math.min(90, 55 + Math.abs(priceChange) + (volumeRatio * 50))),
-          reason: priceChange < -15 ? 'Heavy decline with volume' : 'Decline without volume support',
+          confidence: Math.round(Math.min(90, 50 + Math.abs(priceChange) * 2 + (volumeRatio * 100))),
+          reason: priceChange < -10 ? 'Caída fuerte con volumen' : 'Declive sin soporte de volumen',
           timestamp: new Date().toISOString(),
           status: 'active' as const
         });
+        console.log(`🔴 SELL signal: ${coin.symbol} - caída ${priceChange.toFixed(2)}%`);
+      }
+      // SELL por overbought
+      else if (priceChange > 15 && athDistance > -20) {
+        signals.push({
+          id: `${coin.id}-sell-overbought-${Date.now()}`,
+          coin: coin.symbol.toUpperCase(),
+          type: 'sell' as const,
+          price: coin.current_price,
+          confidence: Math.round(Math.min(85, 55 + (priceChange - 15))),
+          reason: 'Overbought - tomar ganancias',
+          timestamp: new Date().toISOString(),
+          status: 'active' as const
+        });
+        console.log(`🔴 SELL overbought: ${coin.symbol} - subida ${priceChange.toFixed(2)}%`);
       }
       
-      // Hold signals for stable coins
-      if (Math.abs(priceChange) < 3 && volumeRatio > 0.02) {
+      // HOLD signals - Consolidación
+      if (Math.abs(priceChange) < 2 && volumeRatio > 0.01) {
         signals.push({
           id: `${coin.id}-hold-${Date.now()}`,
           coin: coin.symbol.toUpperCase(),
           type: 'hold' as const,
           price: coin.current_price,
-          confidence: Math.round(Math.min(80, 50 + (volumeRatio * 100))),
-          reason: 'Consolidation phase - prepare for next move',
+          confidence: Math.round(Math.min(75, 40 + (volumeRatio * 200))),
+          reason: 'Consolidación - esperar próximo movimiento',
           timestamp: new Date().toISOString(),
           status: 'active' as const
         });
+        console.log(`🟡 HOLD signal: ${coin.symbol} - consolidando`);
       }
     }
     
-    console.log(`🎯 Generated ${signals.length} trading signals from ${memecoins.length} coins`);
+    console.log(`🎯 GENERADAS ${signals.length} señales de trading de ${memecoins.length} coins`);
     
     // Log each signal for debugging
     signals.forEach((signal, index) => {
-      console.log(`   ${index + 1}. ${signal.coin} ${signal.type} $${signal.price.toFixed(6)} (${signal.confidence}%) - ${signal.reason}`);
+      console.log(`   ${index + 1}. ${signal.coin} ${signal.type.toUpperCase()} $${signal.price < 0.01 ? signal.price.toFixed(6) : signal.price.toFixed(4)} (${signal.confidence}%) - ${signal.reason}`);
     });
     
     return signals;
