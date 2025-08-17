@@ -151,19 +151,39 @@ export function useTradingData() {
 
   // Función para ejecutar análisis automático de Telegram
   const runTelegramAnalysis = async () => {
-    if (!user || !profile?.alerts_enabled) return;
+    if (!user || !profile?.alerts_enabled) {
+      console.log('⏭️ Skipping Telegram analysis: user not logged in or alerts disabled');
+      return;
+    }
     
     try {
       console.log('🤖 Ejecutando análisis automático de Telegram...');
       
+      // Check if environment variables are configured
+      if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+        console.error('❌ Supabase environment variables not configured');
+        console.error('Please check your .env file and ensure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set');
+        return;
+      }
+      
       const edgeFunctionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/trading-analyzer`;
+      console.log('📡 Calling edge function:', edgeFunctionUrl);
+      
       const response = await fetch(edgeFunctionUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json',
-        }
+        },
+        timeout: 30000 // 30 second timeout
       });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ Edge function returned ${response.status}: ${response.statusText}`);
+        console.error('Response:', errorText);
+        throw new Error(`Edge function error: ${response.status} ${response.statusText}`);
+      }
       
       const result = await response.json();
       
@@ -175,6 +195,15 @@ export function useTradingData() {
       }
     } catch (error) {
       console.error('❌ Error ejecutando análisis automático:', error);
+      
+      // Provide more specific error information
+      if (error.message === 'Failed to fetch') {
+        console.error('🔧 Troubleshooting steps:');
+        console.error('1. Check your .env file has VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY');
+        console.error('2. Verify the trading-analyzer Edge Function is deployed in Supabase');
+        console.error('3. Check your internet connection');
+        console.error('4. Restart the development server after changing .env');
+      }
     }
   };
   const fetchData = async () => {
