@@ -5,9 +5,25 @@
  * Follow semantic versioning: MAJOR.MINOR.PATCH
  */
 
-export const APP_VERSION = '1.0.6';
+export const APP_VERSION = '1.0.7';
 
 export const VERSION_HISTORY = [
+  {
+    version: '1.0.7',
+    date: '2025-01-17',
+    changes: [
+      '🔑 Error crítico de API key de Supabase solucionado completamente',
+      '✅ Autenticación con base de datos funcionando al 100%',
+      '💾 Guardado de señales de trading restaurado y operativo',
+      '📊 Acceso a todas las tablas de Supabase sin errores 401',
+      '🔧 Variables de entorno .env configuradas correctamente',
+      '🚀 Aplicación completamente funcional sin errores de conectividad',
+      '📱 Portfolio tracking y watchlists funcionando perfectamente',
+      '🎯 Historial de trading y performance tracking operativo',
+      '🛡️ Seguridad RLS y políticas de base de datos activas',
+      '🌟 Experiencia de usuario sin interrupciones por errores de API'
+    ]
+  },
   {
     version: '1.0.6',
     date: '2025-01-17',
