@@ -192,77 +192,111 @@ class TradingAnalyzer {
     const volumeRatio = coin.volume_24h / coin.market_cap;
     const athDistance = coin.ath_change_percentage || -100;
 
-    // Calculate RSI approximation based on price changes
+    // Calculate RSI approximation based on price changes (0-100 scale)
     const rsi = this.calculateSimpleRSI(priceChange24h, priceChange7d);
     
-    // Volume spike detection
-    const volumeSpike = volumeRatio > 0.05; // 5% of market cap in 24h volume (más sensible)
+    // Volume spike detection - High trading activity
+    const volumeSpike = volumeRatio > 0.05; // 5% of market cap in 24h volume
+    const highVolume = volumeRatio > 0.03; // 3% threshold for significant volume
 
     let action: 'BUY' | 'HOLD' | 'SELL' = 'HOLD';
     let confidence = 50;
     let reason = 'Neutral market conditions';
 
-    console.log(`📊 Analizando ${coin.symbol}: precio 24h ${priceChange24h.toFixed(2)}%, volumen ratio ${(volumeRatio * 100).toFixed(2)}%, RSI ${rsi.toFixed(1)}`);
+    console.log(`📊 Analizando ${coin.symbol}:`);
+    console.log(`   💰 Precio 24h: ${priceChange24h.toFixed(2)}%`);
+    console.log(`   📊 Volumen/MCap: ${(volumeRatio * 100).toFixed(2)}%`);
+    console.log(`   📈 RSI: ${rsi.toFixed(1)}`);
+    console.log(`   🎯 ATH Distance: ${athDistance.toFixed(1)}%`);
 
-    // BUY signals - Umbrales MUY sensibles
-    if (rsi < 40 && priceChange24h > -10 && volumeSpike) {
+    // 🟢 BUY SIGNALS - Oportunidades de compra
+    
+    // 1. OVERSOLD + VOLUME SPIKE = Posible reversión alcista
+    if (rsi < 40 && priceChange24h > -15 && volumeSpike) {
       action = 'BUY';
       confidence = 90;
-      reason = 'Oversold con pico de volumen - posible reversión';
-    } else if (priceChange24h > 5 && priceChange7d > 10 && volumeSpike) {
+      reason = 'OVERSOLD + VOLUMEN ALTO: RSI bajo (' + rsi.toFixed(1) + ') con actividad intensa - reversión probable';
+    } 
+    // 2. MOMENTUM FUERTE = Tendencia alcista confirmada
+    else if (priceChange24h > 3 && priceChange7d > 8 && highVolume) {
       action = 'BUY';
       confidence = 85;
-      reason = 'Momentum fuerte con alto volumen';
-    } else if (athDistance > -50 && priceChange24h > 3) {
+      reason = 'MOMENTUM ALCISTA: +' + priceChange24h.toFixed(1) + '% (24h) y +' + priceChange7d.toFixed(1) + '% (7d) con volumen';
+    } 
+    // 3. CERCA DEL ATH + MOMENTUM = Breakout potencial
+    else if (athDistance > -50 && priceChange24h > 2) {
       action = 'BUY';
       confidence = 80;
-      reason = 'Cerca del ATH con momentum positivo';
-    } else if (priceChange24h > 2 && volumeRatio > 0.03) {
+      reason = 'CERCA ATH: Solo -' + Math.abs(athDistance).toFixed(1) + '% del máximo histórico con momentum';
+    } 
+    // 4. DIP BUYING = Comprar en caídas con volumen
+    else if (priceChange24h < -8 && priceChange24h > -25 && volumeSpike) {
+      action = 'BUY';
+      confidence = 88;
+      reason = 'DIP BUYING: Caída -' + Math.abs(priceChange24h).toFixed(1) + '% con volumen - oportunidad de entrada';
+    }
+    // 5. BREAKOUT TEMPRANO = Movimiento alcista inicial
+    else if (priceChange24h > 1.5 && highVolume && rsi < 70) {
       action = 'BUY';
       confidence = 75;
-      reason = 'Movimiento alcista con volumen';
-    } else if (priceChange24h < -8 && priceChange24h > -20 && volumeSpike) {
-      action = 'BUY';
-      confidence = 85;
-      reason = 'Caída fuerte - oportunidad de compra';
+      reason = 'BREAKOUT TEMPRANO: +' + priceChange24h.toFixed(1) + '% con volumen, RSI no sobrecomprado';
     }
 
-    // SELL signals - Más sensibles
-    else if (rsi > 60 && priceChange24h < -5) {
+    // 🔴 SELL SIGNALS - Señales de venta
+    
+    // 1. OVERBOUGHT + DECLINING = Tomar ganancias
+    else if (rsi > 65 && priceChange24h < -3) {
       action = 'SELL';
       confidence = 90;
-      reason = 'Sobrecomprado y cayendo - tomar ganancias';
-    } else if (priceChange24h < -10 && !volumeSpike) {
+      reason = 'OVERBOUGHT + CAÍDA: RSI alto (' + rsi.toFixed(1) + ') y bajando -' + Math.abs(priceChange24h).toFixed(1) + '% - tomar ganancias';
+    } 
+    // 2. CAÍDA SIN SOPORTE = Venta en pánico
+    else if (priceChange24h < -8 && !volumeSpike) {
       action = 'SELL';
       confidence = 85;
-      reason = 'Caída fuerte sin soporte de volumen';
-    } else if (athDistance < -80 && priceChange7d < -20) {
+      reason = 'CAÍDA SIN SOPORTE: -' + Math.abs(priceChange24h).toFixed(1) + '% sin volumen - venta en pánico';
+    } 
+    // 3. LEJOS DEL ATH + DECLIVE = Tendencia bajista
+    else if (athDistance < -75 && priceChange7d < -15) {
       action = 'SELL';
       confidence = 80;
-      reason = 'Lejos del ATH con declive continuo';
-    } else if (priceChange24h > 20 && rsi > 65) {
+      reason = 'TENDENCIA BAJISTA: -' + Math.abs(athDistance).toFixed(1) + '% del ATH y -' + Math.abs(priceChange7d).toFixed(1) + '% (7d)';
+    } 
+    // 4. PUMP EXCESIVO = Riesgo de corrección
+    else if (priceChange24h > 15 && rsi > 70) {
       action = 'SELL';
       confidence = 85;
-      reason = 'Subida excesiva - riesgo de corrección';
+      reason = 'PUMP EXCESIVO: +' + priceChange24h.toFixed(1) + '% en 24h, RSI sobrecomprado - corrección probable';
     }
 
-    // HOLD signals - Más amplios
-    else if (Math.abs(priceChange24h) < 3 && rsi > 35 && rsi < 65) {
+    // 🟡 HOLD SIGNALS - Mantener posición
+    
+    // 1. CONSOLIDACIÓN = Esperar dirección clara
+    else if (Math.abs(priceChange24h) < 2.5 && rsi > 35 && rsi < 65) {
       action = 'HOLD';
       confidence = 75;
-      reason = 'Acción de precio estable - esperar señal más clara';
-    } else if (volumeRatio > 0.02 && Math.abs(priceChange24h) < 5) {
+      reason = 'CONSOLIDACIÓN: Precio estable ±' + Math.abs(priceChange24h).toFixed(1) + '%, RSI neutral - esperar breakout';
+    } 
+    // 2. ACUMULACIÓN = Volumen sin movimiento de precio
+    else if (highVolume && Math.abs(priceChange24h) < 4) {
       action = 'HOLD';
       confidence = 70;
-      reason = 'Volumen presente - consolidación activa';
+      reason = 'ACUMULACIÓN: Alto volumen sin movimiento de precio - posible preparación para movimiento';
+    }
+    // 3. RANGO NEUTRAL = Sin señales claras
+    else if (rsi > 40 && rsi < 60 && Math.abs(priceChange24h) < 5) {
+      action = 'HOLD';
+      confidence = 65;
+      reason = 'RANGO NEUTRAL: Sin señales técnicas claras - mantener y observar';
     }
 
-    // Solo retornar señales con confianza > 65%
-    if (confidence < 65) {
+    // Solo retornar señales con confianza > 60%
+    if (confidence < 60) {
       return null;
     }
 
-    console.log(`🎯 Señal generada: ${coin.symbol} ${action} (${confidence}%) - ${reason}`);
+    console.log(`🎯 SEÑAL: ${coin.symbol} ${action} (${confidence}%)`);
+    console.log(`   📝 ${reason}`);
 
     return {
       coin: coin.symbol.toUpperCase(),
