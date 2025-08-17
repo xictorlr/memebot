@@ -174,10 +174,20 @@ export default function TradingHistoryChart() {
     }
   };
 
-  const filteredActions = actions.filter(action => {
+  const filteredActions = React.useMemo(() => {
     const cutoff = new Date(Date.now() - getTimeframeHours() * 60 * 60 * 1000);
-    return new Date(action.created_at) >= cutoff;
-  });
+    const filtered = actions.filter(action => {
+      const actionDate = new Date(action.created_at);
+      return actionDate >= cutoff;
+    });
+    
+    console.log(`🔍 Filtering actions for ${timeframe}:`);
+    console.log(`   📅 Cutoff: ${cutoff.toLocaleString()}`);
+    console.log(`   📊 Total actions: ${actions.length}`);
+    console.log(`   ✅ Filtered actions: ${filtered.length}`);
+    
+    return filtered;
+  }, [actions, timeframe]);
 
   const actionCounts = {
     buy: filteredActions.filter(a => a.action === 'buy').length,
@@ -326,12 +336,17 @@ export default function TradingHistoryChart() {
         {/* BUY Signals by Coin */}
         {buySignalsByCoin.length > 0 && (
           <div className="mb-6">
-            <h3 className="font-semibold text-white mb-3">🟢 Señales BUY por Coin ({timeframe})</h3>
+            <h3 className="font-semibold text-white mb-3">
+              🟢 Señales BUY por Coin ({timeframe}) - {filteredActions.filter(a => a.action === 'buy').length} total
+            </h3>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               {buySignalsByCoin.map(([coin, count]) => (
                 <div key={coin} className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 text-center">
                   <p className="text-green-400 font-bold text-lg">{count}</p>
                   <p className="text-green-300 text-sm font-medium">{coin.toUpperCase()}</p>
+                  <p className="text-green-200 text-xs">
+                    {((count / actionCounts.buy) * 100).toFixed(1)}%
+                  </p>
                 </div>
               ))}
             </div>

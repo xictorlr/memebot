@@ -2,9 +2,9 @@
   # Trading Analyzer Edge Function - Telegram Bot
 
   1. Functionality
-    - Analyzes memecoin data every hour
+    - Analyzes memecoin data every 5 minutes
     - Generates BUY/HOLD/SELL recommendations
-    - Sends Telegram notifications via Telegram Bot API
+    - Sends Telegram notifications every 15 minutes (3 cycles)
     - Uses technical indicators and market sentiment
 
   2. Telegram Integration
@@ -62,6 +62,15 @@ class TradingAnalyzer {
   // Telegram Bot credentials (set in Supabase dashboard)
   private readonly TELEGRAM_BOT_TOKEN = '8486768601:AAF9_1rbGsJ-r7Zq-y4lnt08QeAxAOBVFG0'; // @VictorLopezRapado_Alert_bot
   private readonly TELEGRAM_CHAT_ID = '5441177022'; // Victor's chat ID
+
+  // Control de frecuencia de mensajes (cada 15 minutos = 3 ciclos de 5 minutos)
+  private shouldSendTelegramMessage(): boolean {
+    const now = new Date();
+    const minutes = now.getMinutes();
+    
+    // Enviar solo en minutos 0, 15, 30, 45 (cada 15 minutos)
+    return minutes % 15 === 0;
+  }
 
   async analyzeMarket(): Promise<TradingSignal[]> {
     try {
@@ -369,100 +378,118 @@ class TradingAnalyzer {
       minute: '2-digit'
     });
 
-    // Separar señales por tipo
-    const buySignals = signals.filter(signal => signal.action === 'BUY');
-    const sellSignals = signals.filter(signal => signal.action === 'SELL');
-    const holdSignals = signals.filter(signal => signal.action === 'HOLD');
+    // Get signals from last 15 minutes from database
+    const last15MinSignals = await this.getSignalsFromLast15Minutes();
+    
+    // Count signals by coin and type
+    const signalCounts = this.countSignalsByCoin(last15MinSignals);
 
     let message = `🤖 *MEMEBOT TRADING ALERT* 🤖\n`;
     message += `📅 ${timestamp}\n\n`;
 
-    if (signals.length === 0) {
+    if (Object.keys(signalCounts).length === 0) {
       message += `⚠️ *SIN SEÑALES FUERTES*\n`;
-      message += `No hay señales de trading en este momento\\.\n`;
+      message += `No hay señales en los últimos 15 minutos\\.\n`;
       message += `Esperando mejores oportunidades de entrada\\.\n\n`;
       message += `💡 *Estrategia*: Mantén efectivo y espera dips\\.`;
       return message;
     }
 
-    const totalSignals = buySignals.length + sellSignals.length + holdSignals.length;
-    message += `📊 *ANÁLISIS COMPLETO \\- ${totalSignals} SEÑALES*\n\n`;
+    const totalCoins = Object.keys(signalCounts).length;
+    const totalSignals = Object.values(signalCounts).reduce((sum: number, counts: any) => 
+      sum + counts.buy + counts.sell + counts.hold, 0);
+    
+    message += `📊 *SEÑALES ÚLTIMOS 15 MIN \\- ${totalSignals} TOTAL*\n`;
+    message += `🪙 *${totalCoins} COINS ANALIZADAS*\n\n`;
 
-    // SEÑALES BUY
-    if (buySignals.length > 0) {
-      message += `🟢 *COMPRAR \\(${buySignals.length}\\)*\n`;
-      buySignals.forEach((signal, index) => {
-        message += `\n*${index + 1}\\. ${signal.coin}* 📈\n`;
-        message += `💰 $${this.formatPrice(signal.price)}\n`;
-        message += `🔥 ${signal.confidence}% confianza\n`;
-        message += `📝 ${this.escapeMarkdown(signal.reason)}\n`;
-        
-        if (signal.rsi) {
-          message += `📊 RSI: ${signal.rsi.toFixed(1)}`;
-          if (signal.rsi < 40) message += ` \\(OVERSOLD\\)`;
-          else if (signal.rsi > 70) message += ` \\(OVERBOUGHT\\)`;
-          message += `\n`;
-        }
-        
-        if (signal.volumeSpike) {
-          message += `🚀 VOLUMEN ALTO\n`;
-        }
-      });
+    // Show top coins with most signals
+    const sortedCoins = Object.entries(signalCounts)
+      .sort(([,a]: [string, any], [,b]: [string, any]) => 
+        (b.buy + b.sell + b.hold) - (a.buy + a.sell + a.hold))
+      .slice(0, 10);
+
+    sortedCoins.forEach(([coin, counts]: [string, any], index) => {
+      const totalCoinSignals = counts.buy + counts.sell + counts.hold;
+      message += `*${index + 1}\\. ${coin.toUpperCase()}* \\(${totalCoinSignals} señales\\)\n`;
+      
+      if (counts.buy > 0) {
+        message += `🟢 ${counts.buy} BUY`;
+        if (counts.sell > 0 || counts.hold > 0) message += ` • `;
+      }
+      
+      if (counts.sell > 0) {
+        message += `🔴 ${counts.sell} SELL`;
+        if (counts.hold > 0) message += ` • `;
+      }
+      
+      if (counts.hold > 0) {
+        message += `🟡 ${counts.hold} HOLD`;
+      }
+      
       message += `\n`;
-    }
+    });
 
-    // SEÑALES SELL
-    if (sellSignals.length > 0) {
-      message += `🔴 *VENDER \\(${sellSignals.length}\\)*\n`;
-      sellSignals.forEach((signal, index) => {
-        message += `\n*${index + 1}\\. ${signal.coin}* 📉\n`;
-        message += `💰 $${this.formatPrice(signal.price)}\n`;
-        message += `🔥 ${signal.confidence}% confianza\n`;
-        message += `📝 ${this.escapeMarkdown(signal.reason)}\n`;
-        
-        if (signal.rsi) {
-          message += `📊 RSI: ${signal.rsi.toFixed(1)}`;
-          if (signal.rsi < 40) message += ` \\(OVERSOLD\\)`;
-          else if (signal.rsi > 70) message += ` \\(OVERBOUGHT\\)`;
-          message += `\n`;
-        }
-        
-        if (signal.volumeSpike) {
-          message += `⚠️ VENTA CON VOLUMEN\n`;
-        }
-      });
-      message += `\n`;
-    }
+    message += `\n`;
 
-    // SEÑALES HOLD
-    if (holdSignals.length > 0) {
-      message += `🟡 *MANTENER \\(${holdSignals.length}\\)*\n`;
-      holdSignals.forEach((signal, index) => {
-        message += `\n*${index + 1}\\. ${signal.coin}* ⚖️\n`;
-        message += `💰 $${this.formatPrice(signal.price)}\n`;
-        message += `🔥 ${signal.confidence}% confianza\n`;
-        message += `📝 ${this.escapeMarkdown(signal.reason)}\n`;
-        
-        if (signal.rsi) {
-          message += `📊 RSI: ${signal.rsi.toFixed(1)} \\(NEUTRAL\\)\n`;
-        }
-        
-        if (signal.volumeSpike) {
-          message += `📊 ACUMULACIÓN DETECTADA\n`;
-        }
-      });
-      message += `\n`;
-    }
-
-    message += `⚠️ *GESTIÓN DE RIESGO*\n`;
-    message += `🟢 *Compras*: Stop\\-loss \\-5%, Take profit \\+15%\n`;
-    message += `🔴 *Ventas*: Tomar ganancias gradualmente\n`;
-    message += `🟡 *Hold*: Esperar confirmación de breakout\n`;
-    message += `💡 Máximo 3\\-5% del capital por trade\n\n`;
+    // Summary by action type
+    const totalBuy = Object.values(signalCounts).reduce((sum: number, counts: any) => sum + counts.buy, 0);
+    const totalSell = Object.values(signalCounts).reduce((sum: number, counts: any) => sum + counts.sell, 0);
+    const totalHold = Object.values(signalCounts).reduce((sum: number, counts: any) => sum + counts.hold, 0);
+    
+    message += `📊 *RESUMEN ÚLTIMOS 15 MIN*\n`;
+    message += `🟢 ${totalBuy} señales BUY\n`;
+    message += `🔴 ${totalSell} señales SELL\n`;
+    message += `🟡 ${totalHold} señales HOLD\n\n`;
+    
+    message += `⚠️ *RECORDATORIO*\n`;
+    message += `• Usa stop\\-loss siempre\n`;
+    message += `• Máximo 3\\-5% del capital por trade\n`;
+    message += `• DYOR \\- Esto es análisis técnico\n\n`;
     message += `🔄 Próximo análisis en 5 minutos\n`;
+    message += `📱 Próximo mensaje en 15 minutos\n`;
     message += `🌐 Dashboard: https://xictorlrbot\\.com`;
 
     return message;
+  }
+
+  private async getSignalsFromLast15Minutes(): Promise<any[]> {
+    try {
+      const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+      
+      const { data, error } = await supabase
+        .from('trading_actions')
+        .select('*')
+        .gte('created_at', fifteenMinutesAgo)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching last 15min signals:', error);
+        return [];
+      }
+
+      console.log(`📊 Found ${data?.length || 0} signals in last 15 minutes`);
+      return data || [];
+    } catch (error) {
+      console.error('Error in getSignalsFromLast15Minutes:', error);
+      return [];
+    }
+  }
+
+  private countSignalsByCoin(signals: any[]): { [coin: string]: { buy: number, sell: number, hold: number } } {
+    const counts: { [coin: string]: { buy: number, sell: number, hold: number } } = {};
+    
+    signals.forEach(signal => {
+      const coin = signal.symbol || signal.coin_id;
+      if (!counts[coin]) {
+        counts[coin] = { buy: 0, sell: 0, hold: 0 };
+      }
+      
+      if (signal.action === 'buy') counts[coin].buy++;
+      else if (signal.action === 'sell') counts[coin].sell++;
+      else if (signal.action === 'hold') counts[coin].hold++;
+    });
+    
+    return counts;
   }
 
   private escapeMarkdown(text: string): string {
@@ -497,17 +524,28 @@ serve(async (req) => {
     
     console.log(`📊 Found ${signals.length} signals`);
     
-    // Save actions to database
+    // SIEMPRE guardar análisis en base de datos (cada 5 minutos)
     await analyzer.saveActionsToDatabase(signals);
     
-    // Send Telegram notification
-    await analyzer.sendTelegramMessage(signals);
+    // SOLO enviar Telegram cada 15 minutos
+    const shouldSendTelegram = analyzer.shouldSendTelegramMessage();
+    console.log(`📱 Should send Telegram: ${shouldSendTelegram}`);
+    
+    if (shouldSendTelegram) {
+      console.log('📤 Sending Telegram message...');
+      await analyzer.sendTelegramMessage(signals);
+    } else {
+      console.log('⏭️ Skipping Telegram message (not 15min interval)');
+    }
     
     return new Response(
       JSON.stringify({
         success: true,
         signals,
-        message: `Analysis completed and Telegram notification sent with ${signals.length} signals`,
+        message: shouldSendTelegram 
+          ? `Analysis completed and Telegram notification sent with ${signals.length} signals`
+          : `Analysis completed (${signals.length} signals saved to DB, Telegram skipped)`,
+        telegramSent: shouldSendTelegram,
         timestamp: new Date().toISOString()
       }),
       {
