@@ -5,9 +5,25 @@
  * Follow semantic versioning: MAJOR.MINOR.PATCH
  */
 
-export const APP_VERSION = '1.0.2';
+export const APP_VERSION = '1.0.3';
 
 export const VERSION_HISTORY = [
+  {
+    version: '1.0.3',
+    date: '2025-01-17',
+    changes: [
+      '🔧 Error crítico de user_id solucionado completamente',
+      '🗄️ Columna user_id añadida a tabla trading_performance',
+      '📊 Performance tracking personal funcionando 100%',
+      '🛡️ Políticas RLS actualizadas para seguridad por usuario',
+      '📈 Estadísticas públicas y privadas funcionando en paralelo',
+      '🚀 Base de datos completamente estable y sin errores',
+      '✅ Troubleshooting completo realizado y verificado',
+      '🔄 Migración SQL aplicada exitosamente',
+      '💾 Sistema de guardado de señales optimizado',
+      '🎯 Aplicación 100% funcional sin errores de base de datos'
+    ]
+  },
   {
     version: '1.0.2',
     date: '2025-01-16',

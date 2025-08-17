@@ -1,6 +1,6 @@
 # 🤖 MemeBot - Plataforma de Trading Automático
 
-[![Version](https://img.shields.io/badge/version-0.6.0-blue.svg)](https://github.com/yourusername/memebot)
+[![Version](https://img.shields.io/badge/version-1.0.3-blue.svg)](https://github.com/yourusername/memebot)
 [![Telegram](https://img.shields.io/badge/Telegram-@VictorLopezRapado_Alert_bot-blue.svg)](https://t.me/VictorLopezRapado_Alert_bot)
 [![Live Demo](https://img.shields.io/badge/Live-xictorlrbot.com-green.svg)](https://xictorlrbot.com)
 
