@@ -58,20 +58,28 @@ export function useTradingData() {
       const newSignals = api.generateTradingSignals(coinData);
       console.log(`🎯 Generated ${newSignals.length} new signals`);
       
-      // Save signals to database
-      for (const signal of newSignals) {
-        await saveAction({
-          coin_id: signal.coin.toLowerCase(),
-          symbol: signal.coin,
-          action: signal.type,
-          price: signal.price,
-          confidence: Math.round(signal.confidence),
-          reason: signal.reason,
-          market_cap: 0,
-          volume_24h: 0,
-          price_change_24h: 0,
-          volume_spike: false
-        });
+      // Save signals to database only if user is authenticated
+      if (user) {
+        for (const signal of newSignals) {
+          // Find the corresponding coin data for market metrics
+          const coinData = memecoins.find(coin => 
+            coin.symbol.toLowerCase() === signal.coin.toLowerCase() ||
+            coin.id.toLowerCase() === signal.coin.toLowerCase()
+          );
+          
+          await saveAction({
+            coin_id: signal.coin.toLowerCase(),
+            symbol: signal.coin,
+            action: signal.type,
+            price: signal.price,
+            confidence: Math.round(signal.confidence),
+            reason: signal.reason,
+            market_cap: coinData?.market_cap || 0,
+            volume_24h: coinData?.total_volume || 0,
+            price_change_24h: coinData?.price_change_percentage_24h || 0,
+            volume_spike: (coinData?.total_volume || 0) > 1000000 // Simple volume spike detection
+          });
+        }
       }
       
       setSignals(prev => [...newSignals, ...prev].slice(0, 50)); // Keep last 50 signals

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from './useAuth';
 
 interface TradingAction {
   id: string;
@@ -42,6 +43,7 @@ interface PerformanceStats {
 }
 
 export function useTradingHistory() {
+  const { user } = useAuth();
   const [actions, setActions] = useState<TradingAction[]>([]);
   const [performance, setPerformance] = useState<TradingPerformance[]>([]);
   const [stats, setStats] = useState<PerformanceStats>({
@@ -132,10 +134,19 @@ export function useTradingHistory() {
   };
 
   const saveAction = async (action: Omit<TradingAction, 'id' | 'created_at'>) => {
+    // Only save if user is authenticated
+    if (!user) {
+      console.log('User not authenticated, skipping action save');
+      return { error: new Error('User not authenticated') };
+    }
+
     try {
       const { data, error } = await supabase
         .from('trading_actions')
-        .insert(action)
+        .insert({
+          ...action,
+          user_id: user.id
+        })
         .select()
         .single();
 
@@ -158,11 +169,14 @@ export function useTradingHistory() {
   };
 
   const updatePerformanceTracking = async (action: Omit<TradingAction, 'id' | 'created_at'>) => {
+    if (!user) return;
+
     if (action.action === 'buy') {
       // Create new performance entry for buy action
       const { error } = await supabase
         .from('trading_performance')
         .insert({
+          user_id: user.id,
           coin_id: action.coin_id,
           symbol: action.symbol,
           buy_price: action.price,
@@ -178,6 +192,7 @@ export function useTradingHistory() {
       const { data: openPosition } = await supabase
         .from('trading_performance')
         .select('*')
+        .eq('user_id', user.id)
         .eq('coin_id', action.coin_id)
         .eq('status', 'open')
         .order('buy_date', { ascending: false })
