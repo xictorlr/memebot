@@ -5,9 +5,25 @@
  * Follow semantic versioning: MAJOR.MINOR.PATCH
  */
 
-export const APP_VERSION = '1.0.4';
+export const APP_VERSION = '1.0.5';
 
 export const VERSION_HISTORY = [
+  {
+    version: '1.0.5',
+    date: '2025-01-17',
+    changes: [
+      '🧪 Botón de test de Telegram añadido para verificar mensajes',
+      '📱 Panel de configuración completo con 3 tipos de test',
+      '🔍 Test Completo: verifica mensaje directo + análisis automático',
+      '📊 Diagnóstico detallado del estado del sistema',
+      '⚡ Test directo del bot @VictorLopezRapado_Alert_bot',
+      '🛠️ Troubleshooting automático con mensajes específicos',
+      '✅ Verificación en tiempo real del funcionamiento',
+      '🎯 Feedback inmediato: "✅ Enviado" o "❌ Error específico"',
+      '📝 Logs detallados para debugging',
+      '🚀 Interfaz mejorada para testing de Telegram'
+    ]
+  },
   {
     version: '1.0.4',
     date: '2025-01-17',
