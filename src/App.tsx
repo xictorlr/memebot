@@ -5,14 +5,12 @@ import StatsCards from './components/StatsCards';
 import MemecoinList from './components/MemecoinList';
 import TradingSignals from './components/TradingSignals';
 import AlertPanel from './components/AlertPanel';
-import TelegramConfig from './components/TelegramConfig';
 import AuthModal from './components/AuthModal';
 import WatchlistManager from './components/WatchlistManager';
 import Portfolio from './components/Portfolio';
 import MarketSentiment from './components/MarketSentiment';
-import PriceAlerts from './components/PriceAlerts';
-import TradingBot from './components/TradingBot';
 import WhaleTracker from './components/WhaleTracker';
+import TradingHistoryChart from './components/TradingHistoryChart';
 import { useTradingData } from './hooks/useTradingData';
 import { useAuth } from './hooks/useAuth';
 import { APP_VERSION, getLatestChanges } from './config/version';
@@ -76,13 +74,6 @@ function App() {
         
         {user && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-            <PriceAlerts memecoins={memecoins} />
-            <TradingBot signals={signals} />
-          </div>
-        )}
-        
-        {user && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
             <WatchlistManager 
               availableCoins={memecoins.map(coin => ({
                 id: coin.id,
@@ -102,7 +93,7 @@ function App() {
         )}
         
         <div className="mb-8">
-          <TelegramConfig />
+          <TradingHistoryChart />
         </div>
         
         <TradingSignals signals={signals} />
