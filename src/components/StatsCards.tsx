@@ -153,18 +153,32 @@ export default function StatsCards({ memecoins, signals }: StatsCardsProps) {
                     </div>
                     
                     <div className="hidden sm:block text-right">
-                      <p className="text-gray-400 text-sm">MCap</p>
-                      <p className="text-white font-mono text-sm">
-                        {formatCurrency(coin.market_cap || 0)}
-                      </p>
-                    </div>
-                    
-                    <div className="hidden md:block text-right">
-                      <p className="text-gray-400 text-sm">Vol 24h</p>
+                  <a 
+                    href={`https://www.coingecko.com/en/coins/${coin.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:opacity-80 transition-opacity"
+                  >
+                    <img 
+                      src={coin.image} 
+                      alt={coin.name}
+                      className="h-10 w-10 rounded-full"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"><rect width="40" height="40" fill="%23374151"/><text x="20" y="25" text-anchor="middle" fill="white" font-family="Arial" font-size="16" font-weight="bold">${coin.symbol.charAt(0).toUpperCase()}</text></svg>`;
+                      }}
+                    />
+                  </a>
                       <p className="text-white font-mono text-sm">
                         {formatCurrency(coin.volume_24h || 0)}
-                      </p>
-                    </div>
+                    <a 
+                      href={`https://www.coingecko.com/en/coins/${coin.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-blue-400 transition-colors"
+                    >
+                      <h3 className="font-semibold text-white">{coin.name}</h3>
+                    </a>
+                    <p className="text-gray-400 text-sm uppercase">{coin.symbol}</p>
                   </div>
                 ))}
               </div>

@@ -139,15 +139,22 @@ export default function MarketSentiment({ memecoins }: MarketSentimentProps) {
               <div key={coin.id} className="flex items-center justify-between p-3 bg-gray-700/30 rounded-lg">
                 <div className="flex items-center space-x-3">
                   <span className="text-gray-400 font-mono text-sm w-4">#{index + 1}</span>
-                  <img 
-                    src={coin.image} 
-                    alt={coin.name}
-                    className="h-6 w-6 rounded-full"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><rect width="24" height="24" fill="%23374151"/><text x="12" y="16" text-anchor="middle" fill="white" font-family="Arial" font-size="12" font-weight="bold">${coin.symbol.charAt(0).toUpperCase()}</text></svg>`;
-                    }}
-                  />
-                  <span className="text-white font-medium">{coin.symbol.toUpperCase()}</span>
+                  <a 
+                    href={`https://www.coingecko.com/en/coins/${coin.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
+                  >
+                    <img 
+                      src={coin.image} 
+                      alt={coin.name}
+                      className="h-6 w-6 rounded-full"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><rect width="24" height="24" fill="%23374151"/><text x="12" y="16" text-anchor="middle" fill="white" font-family="Arial" font-size="12" font-weight="bold">${coin.symbol.charAt(0).toUpperCase()}</text></svg>`;
+                      }}
+                    />
+                    <span className="text-white font-medium hover:text-blue-400 transition-colors">{coin.symbol.toUpperCase()}</span>
+                  </a>
                 </div>
                 <div className={`flex items-center space-x-1 ${
                   coin.price_change_percentage_24h >= 0 ? 'text-green-500' : 'text-red-500'
@@ -175,15 +182,22 @@ export default function MarketSentiment({ memecoins }: MarketSentimentProps) {
               <div key={coin.id} className="flex items-center justify-between p-3 bg-gray-700/30 rounded-lg">
                 <div className="flex items-center space-x-3">
                   <span className="text-gray-400 font-mono text-sm w-4">#{index + 1}</span>
-                  <img 
-                    src={coin.image} 
-                    alt={coin.name}
-                    className="h-6 w-6 rounded-full"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><rect width="24" height="24" fill="%23374151"/><text x="12" y="16" text-anchor="middle" fill="white" font-family="Arial" font-size="12" font-weight="bold">${coin.symbol.charAt(0).toUpperCase()}</text></svg>`;
-                    }}
-                  />
-                  <span className="text-white font-medium">{coin.symbol.toUpperCase()}</span>
+                  <a 
+                    href={`https://www.coingecko.com/en/coins/${coin.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
+                  >
+                    <img 
+                      src={coin.image} 
+                      alt={coin.name}
+                      className="h-6 w-6 rounded-full"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><rect width="24" height="24" fill="%23374151"/><text x="12" y="16" text-anchor="middle" fill="white" font-family="Arial" font-size="12" font-weight="bold">${coin.symbol.charAt(0).toUpperCase()}</text></svg>`;
+                      }}
+                    />
+                    <span className="text-white font-medium hover:text-blue-400 transition-colors">{coin.symbol.toUpperCase()}</span>
+                  </a>
                 </div>
                 <div className="text-right">
                   <span className="text-white font-mono text-sm">

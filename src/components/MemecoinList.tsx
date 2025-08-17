@@ -23,6 +23,9 @@ export default function MemecoinList({ memecoins, loading }: MemecoinListProps) 
     return `$${price.toFixed(2)}`;
   };
 
+  const getCoinGeckoUrl = (coinId: string) => {
+    return `https://www.coingecko.com/en/coins/${coinId}`;
+  };
   if (loading) {
     return (
       <div className="bg-gray-800 rounded-xl border border-gray-700">
@@ -53,25 +56,32 @@ export default function MemecoinList({ memecoins, loading }: MemecoinListProps) 
         <h2 className="text-xl font-bold text-white mb-6">Top Memecoins</h2>
         <div className="space-y-3">
           {memecoins.map((coin, index) => (
-            <div key={coin.id} className="flex items-center justify-between p-4 bg-gray-700/30 rounded-lg hover:bg-gray-700/50 transition-colors">
+            <div key={coin.id} className="flex items-center justify-between p-4 bg-gray-700/30 rounded-lg hover:bg-gray-700/50 transition-colors group">
               <div className="flex items-center space-x-4">
                 <span className="text-gray-400 font-mono text-sm w-6 text-center">
                   {index + 1}
                 </span>
                 
-                <img 
-                  src={coin.image} 
-                  alt={coin.name}
-                  className="h-10 w-10 rounded-full"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"><rect width="40" height="40" fill="%23374151"/><text x="20" y="25" text-anchor="middle" fill="white" font-family="Arial" font-size="16" font-weight="bold">${coin.symbol.charAt(0).toUpperCase()}</text></svg>`;
-                  }}
-                />
+                <a 
+                  href={getCoinGeckoUrl(coin.id)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center space-x-3 hover:opacity-80 transition-opacity"
+                >
+                  <img 
+                    src={coin.image} 
+                    alt={coin.name}
+                    className="h-10 w-10 rounded-full"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"><rect width="40" height="40" fill="%23374151"/><text x="20" y="25" text-anchor="middle" fill="white" font-family="Arial" font-size="16" font-weight="bold">${coin.symbol.charAt(0).toUpperCase()}</text></svg>`;
+                    }}
+                  />
                 
-                <div>
-                  <h3 className="font-semibold text-white">{coin.name}</h3>
-                  <p className="text-gray-400 text-sm uppercase">{coin.symbol}</p>
-                </div>
+                  <div>
+                    <h3 className="font-semibold text-white group-hover:text-blue-400 transition-colors">{coin.name}</h3>
+                    <p className="text-gray-400 text-sm uppercase">{coin.symbol}</p>
+                  </div>
+                </a>
               </div>
               
               <div className="text-right">
@@ -104,9 +114,15 @@ export default function MemecoinList({ memecoins, loading }: MemecoinListProps) 
                 </p>
               </div>
               
-              <button className="text-gray-400 hover:text-white transition-colors">
+              <a
+                href={getCoinGeckoUrl(coin.id)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-400 hover:text-white transition-colors"
+                title={`Ver ${coin.name} en CoinGecko`}
+              >
                 <ExternalLink className="h-4 w-4" />
-              </button>
+              </a>
             </div>
           ))}
         </div>
