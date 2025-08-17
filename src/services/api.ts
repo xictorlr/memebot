@@ -161,40 +161,69 @@ export class TradingAPI {
 
   async getMemecoins() {
     try {
-      const targetUrl = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${MEMECOIN_IDS.join(',')}&order=market_cap_desc&per_page=50&page=1&sparkline=false&price_change_percentage=24h,7d`;
-      
-      // Check if Supabase environment variables are configured
+      // First check if environment variables are properly configured
       if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
-        console.warn('Supabase environment variables not configured, using fallback data');
+        console.warn('⚠️ Supabase environment variables not configured, using fallback data');
         return this.getFallbackData();
       }
 
+      const targetUrl = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${MEMECOIN_IDS.join(',')}&order=market_cap_desc&per_page=50&page=1&sparkline=false&price_change_percentage=24h,7d`;
+      
       // Use Supabase Edge Function as proxy
       const proxyUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/coingecko-proxy?url=${encodeURIComponent(targetUrl)}`;
       
-      const response = await fetch(proxyUrl, {
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json'
+      console.log('🔄 Attempting to fetch from Supabase Edge Function...');
+      
+      let response;
+      try {
+        response = await fetch(proxyUrl, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 10000 // 10 second timeout
+        });
+      } catch (fetchError) {
+        console.error('❌ Network error with Supabase Edge Function:', fetchError);
+        console.log('🔄 Trying direct CoinGecko API as fallback...');
+        
+        // Try direct CoinGecko API as fallback
+        try {
+          response = await fetch(targetUrl, {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json',
+              'User-Agent': 'MemeBot-Trading-App/1.0.3'
+            },
+            timeout: 10000
+          });
+        } catch (directError) {
+          console.error('❌ Direct CoinGecko API also failed:', directError);
+          console.log('📊 Using fallback data with realistic values');
+          return this.getFallbackData();
         }
-      });
+      }
       
       if (!response.ok) {
-        console.error(`Proxy request failed: ${response.status} ${response.statusText}`);
-        throw new Error('Failed to fetch memecoin data');
+        console.error(`❌ API request failed: ${response.status} ${response.statusText}`);
+        console.log('📊 Using fallback data due to API error');
+        return this.getFallbackData();
       }
       
       const coinData = await response.json();
       
       // Check if the response contains an error from the edge function
       if (coinData.error) {
-        console.warn('Edge function returned error:', coinData.error);
-        throw new Error(coinData.message || 'Edge function error');
+        console.warn('⚠️ Edge function returned error:', coinData.error);
+        console.log('📊 Using fallback data due to edge function error');
+        return this.getFallbackData();
       }
       
       // Ensure coinData is an array before filtering
       if (!Array.isArray(coinData)) {
-        console.warn('CoinGecko API returned non-array data:', coinData);
+        console.warn('⚠️ API returned non-array data:', typeof coinData);
+        console.log('📊 Using fallback data due to invalid response format');
         return this.getFallbackData();
       }
       
@@ -221,8 +250,8 @@ export class TradingAPI {
       return processedData;
         
     } catch (error) {
-      console.error('Error fetching memecoins:', error);
-      console.log('Falling back to demo data with proper volume values');
+      console.error('❌ Critical error in getMemecoins:', error);
+      console.log('📊 Using fallback data as last resort');
       return this.getFallbackData();
     }
   }
