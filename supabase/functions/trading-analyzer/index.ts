@@ -514,11 +514,12 @@ class TradingAnalyzer {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
+  // Handle CORS preflight requests FIRST - before any other logic
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { 
+    console.log('🔧 Handling CORS preflight request');
+    return new Response('ok', {
       status: 200,
-      headers: corsHeaders 
+      headers: corsHeaders
     });
   }
 
