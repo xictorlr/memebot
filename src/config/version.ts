@@ -5,9 +5,25 @@
  * Follow semantic versioning: MAJOR.MINOR.PATCH
  */
 
-export const APP_VERSION = '1.0.3';
+export const APP_VERSION = '1.0.4';
 
 export const VERSION_HISTORY = [
+  {
+    version: '1.0.4',
+    date: '2025-01-17',
+    changes: [
+      '🔧 Error crítico "user is not defined" solucionado en TradingHistoryChart',
+      '📊 Estadísticas de performance eliminadas (datos simulados removidos)',
+      '📱 Mensaje de Telegram mejorado con conteo específico por coin',
+      '🎯 Formato detallado: "X BUY • Y SELL • Z HOLD" por cada memecoin',
+      '⏰ Filtros de tiempo (1h/6h/24h) corregidos y funcionando',
+      '🔍 Logs de debug mejorados para troubleshooting',
+      '📈 Análisis más preciso de señales por timeframe',
+      '🚀 Interfaz más limpia sin estadísticas confusas',
+      '✅ Componentes estabilizados sin errores de referencia',
+      '🎨 UI optimizada para mejor experiencia de usuario'
+    ]
+  },
   {
     version: '1.0.3',
     date: '2025-01-17',
