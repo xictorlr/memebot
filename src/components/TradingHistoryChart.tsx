@@ -181,10 +181,17 @@ export default function TradingHistoryChart() {
       return actionDate >= cutoff;
     });
     
-    console.log(`🔍 Filtering actions for ${timeframe}:`);
-    console.log(`   📅 Cutoff: ${cutoff.toLocaleString()}`);
-    console.log(`   📊 Total actions: ${actions.length}`);
-    console.log(`   ✅ Filtered actions: ${filtered.length}`);
+    console.log(`🔍 FILTROS DE TIEMPO - ${timeframe.toUpperCase()}:`);
+    console.log(`   📅 Fecha límite: ${cutoff.toLocaleString()}`);
+    console.log(`   📊 Total acciones: ${actions.length}`);
+    console.log(`   ✅ Acciones filtradas: ${filtered.length}`);
+    console.log(`   ⏰ Rango: ${getTimeframeHours()} horas`);
+    
+    // Debug: Show some sample dates
+    if (actions.length > 0) {
+      console.log(`   🕐 Acción más reciente: ${new Date(actions[0]?.created_at).toLocaleString()}`);
+      console.log(`   🕐 Acción más antigua: ${new Date(actions[actions.length - 1]?.created_at).toLocaleString()}`);
+    }
     
     return filtered;
   }, [actions, timeframe]);

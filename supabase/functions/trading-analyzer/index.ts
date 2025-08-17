@@ -103,18 +103,40 @@ async function sendTelegramMessage(signals: any[]): Promise<boolean> {
       minute: '2-digit'
     });
 
+    // Group signals by coin and action
+    const signalsByCoin: { [key: string]: { buy: number; sell: number; hold: number } } = {};
+    
+    signals.forEach(signal => {
+      if (!signalsByCoin[signal.coin]) {
+        signalsByCoin[signal.coin] = { buy: 0, sell: 0, hold: 0 };
+      }
+      
+      if (signal.action === 'BUY') signalsByCoin[signal.coin].buy++;
+      else if (signal.action === 'SELL') signalsByCoin[signal.coin].sell++;
+      else if (signal.action === 'HOLD') signalsByCoin[signal.coin].hold++;
+    });
+
     let message = `🤖 *MEMEBOT TRADING ALERT* 🤖\n`;
     message += `📅 ${timestamp}\n\n`;
-    message += `🎯 *TOP ${signals.length} SEÑALES*\n\n`;
+    message += `📊 *SEÑALES ÚLTIMOS 15 MIN*\n\n`;
 
-    signals.forEach((signal, index) => {
-      const emoji = signal.action === 'BUY' ? '🟢' : signal.action === 'SELL' ? '🔴' : '🟡';
-      message += `${emoji} ${index + 1}\\. ${signal.coin} ${signal.action === 'BUY' ? '📈' : signal.action === 'SELL' ? '📉' : '⚖️'}\n`;
-      message += `💰 Precio: $${signal.price < 0.01 ? signal.price.toFixed(6) : signal.price.toFixed(4)}\n`;
-      message += `🎯 Acción: ${signal.action}\n`;
-      message += `🔥 Confianza: ${signal.confidence}%\n`;
-      message += `📝 Razón: ${signal.reason}\n\n`;
+    // Show signals count by coin
+    Object.entries(signalsByCoin).forEach(([coin, counts]) => {
+      message += `💎 *${coin}*\n`;
+      if (counts.buy > 0) message += `🟢 ${counts.buy} BUY • `;
+      if (counts.sell > 0) message += `🔴 ${counts.sell} SELL • `;
+      if (counts.hold > 0) message += `🟡 ${counts.hold} HOLD • `;
+      message = message.replace(/ • $/, '\n'); // Remove trailing separator
+      message += `\n`;
     });
+
+    // Summary
+    const totalBuy = signals.filter(s => s.action === 'BUY').length;
+    const totalSell = signals.filter(s => s.action === 'SELL').length;
+    const totalHold = signals.filter(s => s.action === 'HOLD').length;
+    
+    message += `📈 *RESUMEN TOTAL*\n`;
+    message += `🟢 ${totalBuy} BUY • 🔴 ${totalSell} SELL • 🟡 ${totalHold} HOLD\n\n`;
 
     message += `⚠️ *RECORDATORIO*\n`;
     message += `• Usa stop\\-loss siempre\n`;
