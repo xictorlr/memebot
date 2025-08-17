@@ -162,7 +162,11 @@ export function useTradingHistory() {
   };
 
   const updatePerformanceTracking = async (action: Omit<TradingAction, 'id' | 'created_at'>) => {
-    if (!user) return;
+    // Solo trackear performance personal si el usuario está logueado
+    if (!user) {
+      console.log('No user logged in, skipping personal performance tracking');
+      return;
+    }
 
     if (action.action === 'buy') {
       // Create new performance entry for buy action

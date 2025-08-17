@@ -42,7 +42,7 @@ export default function TradingHistoryChart() {
         const { data: performanceData, error: performanceError } = await supabase
           .from('trading_performance')
           .select('*')
-          .is('user_id', null) // Only get general performance data, not user-specific
+          .or('user_id.is.null,user_id.eq.""') // Get general performance data (no user_id)
           .order('created_at', { ascending: false })
           .limit(50);
 
