@@ -139,6 +139,7 @@ export default function TelegramConfig() {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json',
         }
+        signal: AbortSignal.timeout(30000)
       });
       
       const result = await response.json();
