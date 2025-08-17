@@ -26,24 +26,89 @@ export default function TradingHistoryChart() {
         const { supabase } = await import('../lib/supabase');
         
         console.log('🔄 Fetching trading history from database...');
+        console.log('📊 Current user:', user?.id || 'No user');
         
         // Fetch recent trading actions (last 24 hours)
         const { data: actionsData, error: actionsError } = await supabase
           .from('trading_actions')
           .select('*')
-          .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+          .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()) // Last 7 days instead of 24h
           .order('created_at', { ascending: false })
-          .limit(100);
+          .limit(500);
 
         if (actionsError) {
           console.error('Error fetching trading actions:', actionsError);
+          console.error('Supabase error details:', actionsError);
           setActions([]);
         } else {
           console.log(`✅ Fetched ${actionsData?.length || 0} trading actions from database`);
+          if (actionsData && actionsData.length > 0) {
+            console.log('📊 Sample action:', actionsData[0]);
+          }
           setActions(actionsData || []);
         }
 
-        // Fetch trading performance
+        // Fetch trading performance (both user-specific and general)
+        let performanceQuery = supabase
+          .from('trading_performance')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(100);
+        
+        // If user is logged in, get their personal performance + general performance
+        if (user) {
+          const { data: userPerformance, error: userPerfError } = await supabase
+            .from('trading_performance')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(50);
+            
+          const { data: generalPerformance, error: generalPerfError } = await supabase
+            .from('trading_performance')
+            .select('*')
+            .is('user_id', null)
+            .order('created_at', { ascending: false })
+            .limit(50);
+            
+          if (!userPerfError && !generalPerfError) {
+            const combinedPerformance = [...(userPerformance || []), ...(generalPerformance || [])];
+            console.log(`✅ Fetched ${combinedPerformance.length} performance records (${userPerformance?.length || 0} personal + ${generalPerformance?.length || 0} general)`);
+            setPerformance(combinedPerformance);
+            calculateStats(combinedPerformance);
+          } else {
+            console.error('Error fetching performance:', userPerfError || generalPerfError);
+            setPerformance([]);
+          }
+        } else {
+          // If no user, get general performance only
+          const { data: performanceData, error: performanceError } = await supabase
+            .from('trading_performance')
+            .select('*')
+            .is('user_id', null)
+            .order('created_at', { ascending: false })
+            .limit(100);
+
+          if (performanceError) {
+            console.error('Error fetching trading performance:', performanceError);
+            console.error('Supabase error details:', performanceError);
+            setPerformance([]);
+          } else {
+            console.log(`✅ Fetched ${performanceData?.length || 0} performance records from database`);
+            if (performanceData && performanceData.length > 0) {
+              console.log('📊 Sample performance:', performanceData[0]);
+            }
+            setPerformance(performanceData || []);
+            calculateStats(performanceData || []);
+          }
+        }
+        
+        // If no data exists, create some sample data for demonstration
+        if ((!actionsData || actionsData.length === 0) && (!user)) {
+          console.log('🎭 No data found, creating sample data...');
+          await createSampleData(supabase);
+        }
+        
         const { data: performanceData, error: performanceError } = await supabase
           .from('trading_performance')
           .select('*')
@@ -67,11 +132,131 @@ export default function TradingHistoryChart() {
       }
     };
 
+    const createSampleData = async (supabase: any) => {
+      try {
+        console.log('🎭 Creating sample trading data...');
+        
+        // Create sample actions
+        const sampleActions = [
+          {
+            coin_id: 'pepe',
+            symbol: 'PEPE',
+            action: 'buy',
+            price: 0.000001234,
+            confidence: 85,
+            reason: 'Strong momentum with volume spike',
+            market_cap: 2345678901,
+            volume_24h: 234567890,
+            price_change_24h: 12.45,
+            rsi: 35.2,
+            volume_spike: true
+          },
+          {
+            coin_id: 'dogecoin',
+            symbol: 'DOGE',
+            action: 'sell',
+            price: 0.08234,
+            confidence: 78,
+            reason: 'Overbought conditions detected',
+            market_cap: 11234567890,
+            volume_24h: 456789012,
+            price_change_24h: -5.25,
+            rsi: 72.8,
+            volume_spike: false
+          },
+          {
+            coin_id: 'shiba-inu',
+            symbol: 'SHIB',
+            action: 'hold',
+            price: 0.000008234,
+            confidence: 65,
+            reason: 'Consolidation phase - wait for breakout',
+            market_cap: 4567890123,
+            volume_24h: 123456789,
+            price_change_24h: 2.15,
+            rsi: 55.4,
+            volume_spike: false
+          }
+        ];
+        
+        const { error: actionsError } = await supabase
+          .from('trading_actions')
+          .insert(sampleActions);
+          
+        if (actionsError) {
+          console.error('Error creating sample actions:', actionsError);
+        } else {
+          console.log('✅ Created sample trading actions');
+        }
+        
+        // Create sample performance data
+        const samplePerformance = [
+          {
+            coin_id: 'pepe',
+            symbol: 'PEPE',
+            buy_price: 0.000001000,
+            sell_price: 0.000001200,
+            buy_date: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
+            sell_date: new Date(Date.now() - 30 * 60 * 1000).toISOString(), // 30 min ago
+            profit_loss: 0.000000200,
+            profit_loss_percentage: 20.0,
+            duration_minutes: 90,
+            status: 'closed',
+            user_id: null // General performance
+          },
+          {
+            coin_id: 'dogecoin',
+            symbol: 'DOGE',
+            buy_price: 0.085000,
+            sell_price: 0.082000,
+            buy_date: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(), // 4 hours ago
+            sell_date: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(), // 1 hour ago
+            profit_loss: -0.003000,
+            profit_loss_percentage: -3.53,
+            duration_minutes: 180,
+            status: 'closed',
+            user_id: null // General performance
+          },
+          {
+            coin_id: 'shiba-inu',
+            symbol: 'SHIB',
+            buy_price: 0.000008000,
+            buy_date: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(), // 1 hour ago
+            profit_loss: 0,
+            profit_loss_percentage: 0,
+            duration_minutes: 0,
+            status: 'open',
+            user_id: null // General performance
+          }
+        ];
+        
+        const { error: performanceError } = await supabase
+          .from('trading_performance')
+          .insert(samplePerformance);
+          
+        if (performanceError) {
+          console.error('Error creating sample performance:', performanceError);
+        } else {
+          console.log('✅ Created sample performance data');
+        }
+        
+        // Refresh data after creating samples
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+        
+      } catch (error) {
+        console.error('Error creating sample data:', error);
+      }
+    };
+
     const calculateStats = (performanceData: any[]) => {
       const closedTrades = performanceData.filter(trade => trade.status === 'closed');
       
       if (closedTrades.length === 0) {
         console.log('📊 No closed trades found for stats calculation');
+        console.log('📊 Total performance records:', performanceData.length);
+        console.log('📊 Open trades:', performanceData.filter(trade => trade.status === 'open').length);
         setStats({
           totalTrades: 0,
           winRate: 0,
@@ -90,6 +275,7 @@ export default function TradingHistoryChart() {
       const worstTrade = Math.min(...closedTrades.map(trade => trade.profit_loss_percentage));
 
       console.log(`📊 Stats calculated: ${closedTrades.length} trades, ${winningTrades.length} wins, ${((winningTrades.length / closedTrades.length) * 100).toFixed(1)}% win rate`);
+      console.log(`💰 Total profit: ${totalProfit}, Best: ${bestTrade}%, Worst: ${worstTrade}%`);
       
       setStats({
         totalTrades: closedTrades.length,
@@ -104,9 +290,9 @@ export default function TradingHistoryChart() {
     fetchTradingHistory();
     
     // Refresh every 5 minutes
-    const interval = setInterval(fetchTradingHistory, 5 * 60 * 1000);
+    const interval = setInterval(fetchTradingHistory, 2 * 60 * 1000); // Every 2 minutes for more frequent updates
     return () => clearInterval(interval);
-  }, []);
+  }, [user]); // Add user dependency
 
   const getTimeframeHours = () => {
     switch (timeframe) {

@@ -73,7 +73,7 @@ export function useTradingData() {
           });
         }
         
-        // Also save general performance tracking (without user_id for public stats)
+        // Create performance tracking entries for BUY signals
         const performanceEntries = actions
           .filter(action => action.action === 'buy')
           .map(action => ({
@@ -81,10 +81,15 @@ export function useTradingData() {
             symbol: action.symbol,
             buy_price: action.price,
             buy_date: new Date().toISOString(),
-            status: 'open'
+            status: 'open',
+            user_id: null, // General performance tracking
+            profit_loss: 0,
+            profit_loss_percentage: 0,
+            duration_minutes: 0
           }));
           
         if (performanceEntries.length > 0) {
+          console.log(`💼 Creando ${performanceEntries.length} entradas de performance para señales BUY...`);
           const { error: perfError } = await supabase
             .from('trading_performance')
             .insert(performanceEntries);
@@ -93,6 +98,49 @@ export function useTradingData() {
             console.error('❌ Error guardando performance general:', perfError);
           } else {
             console.log(`✅ Guardadas ${performanceEntries.length} entradas de performance general`);
+          }
+        }
+        
+        // Update existing open positions with current prices (simulate sell signals)
+        const sellActions = actions.filter(action => action.action === 'sell');
+        if (sellActions.length > 0) {
+          console.log(`📈 Procesando ${sellActions.length} señales SELL para cerrar posiciones...`);
+          
+          for (const sellAction of sellActions) {
+            // Find open position for this coin
+            const { data: openPositions, error: findError } = await supabase
+              .from('trading_performance')
+              .select('*')
+              .eq('coin_id', sellAction.coin_id)
+              .eq('status', 'open')
+              .is('user_id', null)
+              .order('buy_date', { ascending: false })
+              .limit(1);
+              
+            if (!findError && openPositions && openPositions.length > 0) {
+              const position = openPositions[0];
+              const buyDate = new Date(position.buy_date);
+              const sellDate = new Date();
+              const durationMinutes = Math.floor((sellDate.getTime() - buyDate.getTime()) / (1000 * 60));
+              const profitLoss = sellAction.price - position.buy_price;
+              const profitLossPercentage = ((sellAction.price - position.buy_price) / position.buy_price) * 100;
+              
+              const { error: updateError } = await supabase
+                .from('trading_performance')
+                .update({
+                  sell_price: sellAction.price,
+                  sell_date: sellDate.toISOString(),
+                  profit_loss: profitLoss,
+                  profit_loss_percentage: profitLossPercentage,
+                  duration_minutes: durationMinutes,
+                  status: 'closed'
+                })
+                .eq('id', position.id);
+                
+              if (!updateError) {
+                console.log(`✅ Cerrada posición ${sellAction.symbol}: ${profitLossPercentage.toFixed(2)}% en ${durationMinutes}min`);
+              }
+            }
           }
         }
       }
