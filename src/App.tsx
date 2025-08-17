@@ -11,6 +11,7 @@ import Portfolio from './components/Portfolio';
 import MarketSentiment from './components/MarketSentiment';
 import WhaleTracker from './components/WhaleTracker';
 import TradingHistoryChart from './components/TradingHistoryChart';
+import TelegramConfig from './components/TelegramConfig';
 import { useTradingData } from './hooks/useTradingData';
 import { useAuth } from './hooks/useAuth';
 import { APP_VERSION, getLatestChanges } from './config/version';
@@ -94,6 +95,10 @@ function App() {
         
         <div className="mb-8">
           <TradingHistoryChart />
+        </div>
+        
+        <div className="mb-8">
+          <TelegramConfig />
         </div>
         
         <TradingSignals signals={signals} />

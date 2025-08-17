@@ -107,6 +107,31 @@ export default function TelegramConfig() {
     setTesting(true);
     
     try {
+      console.log('🧪 Iniciando test completo de Telegram...');
+      
+      // 1. Test directo del bot
+      console.log('📱 Paso 1: Enviando mensaje de prueba directo...');
+      const directResponse = await fetch(`https://api.telegram.org/bot8486768601:AAF9_1rbGsJ-r7Zq-y4lnt08QeAxAOBVFG0/sendMessage`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chat_id: '5441177022',
+          text: `🧪 TEST DIRECTO - ${new Date().toLocaleTimeString()}\n\n✅ Bot funcionando correctamente\n📊 Probando desde la web`,
+          parse_mode: 'Markdown'
+        })
+      });
+      
+      const directResult = await directResponse.json();
+      console.log('📱 Resultado mensaje directo:', directResult);
+      
+      if (!directResult.ok) {
+        throw new Error(`Error mensaje directo: ${directResult.description}`);
+      }
+      
+      // 2. Test del análisis automático
+      console.log('🤖 Paso 2: Ejecutando análisis automático...');
       const edgeFunctionUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/trading-analyzer`;
       const response = await fetch(edgeFunctionUrl, {
         method: 'POST',
@@ -117,15 +142,16 @@ export default function TelegramConfig() {
       });
       
       const result = await response.json();
+      console.log('🤖 Resultado análisis:', result);
       
       if (result.success) {
-        alert(`✅ ¡Análisis completado!\n\n📊 Señales encontradas: ${result.signals?.length || 0}\n📱 Mensaje enviado a Telegram\n⏰ ${new Date().toLocaleTimeString()}`);
+        alert(`✅ ¡TEST COMPLETO EXITOSO!\n\n📱 Mensaje directo: ✅ Enviado\n🤖 Análisis automático: ✅ Funcionando\n📊 Señales encontradas: ${result.signals?.length || 0}\n📱 Telegram enviado: ${result.telegramSent ? '✅ Sí' : '⚠️ No (no era intervalo de 15min)'}\n⏰ ${new Date().toLocaleTimeString()}`);
       } else {
-        alert(`❌ Error en el análisis:\n${result.error || 'Error desconocido'}`);
+        alert(`⚠️ RESULTADO MIXTO:\n\n📱 Mensaje directo: ✅ Enviado\n🤖 Análisis automático: ❌ Error\n📝 Error: ${result.error || 'Error desconocido'}\n\n💡 El bot funciona, pero hay problema en el análisis automático.`);
       }
     } catch (error) {
       console.error('Manual analysis error:', error);
-      alert(`❌ Error ejecutando análisis:\n${error.message}`);
+      alert(`❌ ERROR EN TEST:\n\n📝 ${error.message}\n\n🔧 Revisa:\n• Variables de entorno\n• Edge Function desplegada\n• Conexión a internet`);
     } finally {
       setTesting(false);
     }
@@ -219,11 +245,14 @@ export default function TelegramConfig() {
             <div className="flex items-center space-x-2">
               <CheckCircle className="h-5 w-5 text-green-500" />
               <span className="text-green-400 font-medium">
-                Bot @VictorLopezRapado_Alert_bot - Análisis Automático ACTIVO
+                Bot @VictorLopezRapado_Alert_bot - Sistema de Alertas ACTIVO
               </span>
             </div>
             <p className="text-green-300 text-sm mt-2">
-              {user ? `Usuario: ${user.email} • Frecuencia: cada ${config.frequency} min • Bot: @VictorLopezRapado_Alert_bot` : 'Conectado a @VictorLopezRapado_Alert_bot'}
+              📱 Telegram: @VictorLopezRapado_Alert_bot • 🤖 GitHub Actions: Cada 5min • 📊 Análisis: Automático
+            </p>
+            <p className="text-green-200 text-xs mt-1">
+              💡 Usa el botón "Test Completo" para verificar que todo funciona correctamente
             </p>
           </div>
 
@@ -263,7 +292,7 @@ export default function TelegramConfig() {
           {/* Action Buttons */}
           <div className="flex space-x-4">
             <button
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
               onClick={handleSave}
             >
               <Save className="h-4 w-4" />
@@ -271,7 +300,7 @@ export default function TelegramConfig() {
             </button>
             
             <button
-              className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
+              className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
               onClick={handleTest}
               disabled={testing}
             >
@@ -280,12 +309,12 @@ export default function TelegramConfig() {
             </button>
             
             <button
-              className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
+              className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
               disabled={testing}
               onClick={handleRunAnalysis}
             >
-              <span>🤖</span>
-              <span>{testing ? 'Analizando...' : 'Análisis Manual'}</span>
+              <span>🔍</span>
+              <span>{testing ? 'Analizando...' : 'Test Completo'}</span>
             </button>
           </div>
         </div>
