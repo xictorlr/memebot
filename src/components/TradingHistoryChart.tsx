@@ -269,45 +269,6 @@ export default function TradingHistoryChart() {
           </div>
         </div>
 
-        {/* Performance Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
-          <div className="bg-gray-700/30 rounded-lg p-3 text-center">
-            <p className="text-gray-400 text-xs">Total Trades</p>
-            <p className="text-white font-bold text-xl">{stats.totalTrades}</p>
-            <p className="text-gray-500 text-xs">
-              {stats.totalTrades > 0 ? 'Simulado' : 'Sin datos'}
-            </p>
-          </div>
-          
-          <div className="bg-gray-700/30 rounded-lg p-3 text-center">
-            <p className="text-gray-400 text-xs">Win Rate</p>
-            <p className={`font-bold text-xl ${stats.winRate >= 50 ? 'text-green-500' : 'text-red-500'}`}>
-              {stats.winRate.toFixed(1)}%
-            </p>
-          </div>
-          
-          <div className="bg-gray-700/30 rounded-lg p-3 text-center">
-            <p className="text-gray-400 text-xs">Total P&L</p>
-            <p className={`font-bold text-xl ${stats.totalProfit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-              {formatCurrency(stats.totalProfit)}
-            </p>
-          </div>
-          
-          <div className="bg-gray-700/30 rounded-lg p-3 text-center">
-            <p className="text-gray-400 text-xs">Avg Duration</p>
-            <p className="text-white font-bold text-xl">{Math.round(stats.avgDuration)}m</p>
-          </div>
-          
-          <div className="bg-gray-700/30 rounded-lg p-3 text-center">
-            <p className="text-gray-400 text-xs">Best Trade</p>
-            <p className="text-green-500 font-bold text-xl">{formatPercentage(stats.bestTrade)}</p>
-          </div>
-          
-          <div className="bg-gray-700/30 rounded-lg p-3 text-center">
-            <p className="text-gray-400 text-xs">Worst Trade</p>
-            <p className="text-red-500 font-bold text-xl">{formatPercentage(stats.worstTrade)}</p>
-          </div>
-        </div>
 
         {/* Action Distribution */}
         <div className="mb-6">
