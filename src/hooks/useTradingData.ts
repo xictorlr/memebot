@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { TradingAPI } from '../services/api';
 import { useAuth } from './useAuth';
 import { useUserProfile } from './useUserProfile';
+import { useTradingHistory } from './useTradingHistory';
 import type { Memecoin, TradingSignal, Alert } from '../types';
 
 export function useTradingData() {
   const { user } = useAuth();
   const { profile } = useUserProfile();
+  const { saveAction } = useTradingHistory();
   const [memecoins, setMemecoins] = useState<Memecoin[]>([]);
   const [signals, setSignals] = useState<TradingSignal[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
@@ -55,6 +57,22 @@ export function useTradingData() {
       // Generate trading signals
       const newSignals = api.generateTradingSignals(coinData);
       console.log(`🎯 Generated ${newSignals.length} new signals`);
+      
+      // Save signals to database
+      for (const signal of newSignals) {
+        await saveAction({
+          coin_id: signal.coin.toLowerCase(),
+          symbol: signal.coin,
+          action: signal.type,
+          price: signal.price,
+          confidence: Math.round(signal.confidence),
+          reason: signal.reason,
+          market_cap: 0,
+          volume_24h: 0,
+          price_change_24h: 0,
+          volume_spike: false
+        });
+      }
       
       setSignals(prev => [...newSignals, ...prev].slice(0, 50)); // Keep last 50 signals
       

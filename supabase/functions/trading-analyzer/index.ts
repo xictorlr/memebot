@@ -20,6 +20,7 @@
 */
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -48,6 +49,11 @@ interface TradingSignal {
   rsi?: number;
   volumeSpike?: boolean;
 }
+
+// Initialize Supabase client
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 class TradingAnalyzer {
   private readonly COINGECKO_API = 'https://api.coingecko.com/api/v3';
@@ -255,6 +261,33 @@ class TradingAnalyzer {
     return 100 - (100 / (1 + rs));
   }
 
+  async saveActionsToDatabase(signals: TradingSignal[]): Promise<void> {
+    try {
+      const actions = signals.map(signal => ({
+        coin_id: signal.coin.toLowerCase(),
+        symbol: signal.coin,
+        action: signal.action.toLowerCase(),
+        price: signal.price,
+        confidence: signal.confidence,
+        reason: signal.reason,
+        rsi: signal.rsi,
+        volume_spike: signal.volumeSpike || false
+      }));
+
+      const { error } = await supabase
+        .from('trading_actions')
+        .insert(actions);
+
+      if (error) {
+        console.error('Error saving actions to database:', error);
+      } else {
+        console.log(`✅ Saved ${actions.length} actions to database`);
+      }
+    } catch (error) {
+      console.error('Error saving to database:', error);
+    }
+  }
+
   async sendTelegramMessage(signals: TradingSignal[]): Promise<void> {
     if (!this.TELEGRAM_BOT_TOKEN || !this.TELEGRAM_CHAT_ID) {
       console.error('Telegram credentials not configured');
@@ -370,6 +403,9 @@ serve(async (req) => {
     const signals = await analyzer.analyzeMarket();
     
     console.log(`📊 Found ${signals.length} signals`);
+    
+    // Save actions to database
+    await analyzer.saveActionsToDatabase(signals);
     
     // Send Telegram notification
     await analyzer.sendTelegramMessage(signals);
