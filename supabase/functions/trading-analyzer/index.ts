@@ -398,53 +398,111 @@ class TradingAnalyzer {
       minute: '2-digit'
     });
 
-    // Solo enviar señales BUY por Telegram
+    // Separar señales por tipo
     const buySignals = signals.filter(signal => signal.action === 'BUY');
+    const sellSignals = signals.filter(signal => signal.action === 'SELL');
+    const holdSignals = signals.filter(signal => signal.action === 'HOLD');
 
     let message = `🤖 *MEMEBOT TRADING ALERT* 🤖\n`;
     message += `📅 ${timestamp}\n\n`;
 
-    if (buySignals.length === 0) {
+    if (signals.length === 0) {
       message += `⚠️ *SIN SEÑALES FUERTES*\n`;
-      message += `No hay señales BUY fuertes en este momento\\.\n`;
+      message += `No hay señales de trading en este momento\\.\n`;
       message += `Esperando mejores oportunidades de entrada\\.\n\n`;
       message += `💡 *Estrategia*: Mantén efectivo y espera dips\\.`;
       return message;
     }
 
-    message += `🚀 *${buySignals.length} OPORTUNIDADES DE COMPRA*\n\n`;
+    const totalSignals = buySignals.length + sellSignals.length + holdSignals.length;
+    message += `📊 *ANÁLISIS COMPLETO \\- ${totalSignals} SEÑALES*\n\n`;
 
-    buySignals.forEach((signal, index) => {
-      const emoji = '🟢';
-      const actionEmoji = '📈';
-      
-      message += `${emoji} *${index + 1}\\. COMPRAR ${signal.coin}* ${actionEmoji}\n`;
-      message += `💰 Precio: $${this.formatPrice(signal.price)}\n`;
-      message += `🎯 Acción: *COMPRAR AHORA*\n`;
-      message += `🔥 Confianza: ${signal.confidence}%\n`;
-      message += `📝 Razón: ${signal.reason}\n`;
-      
-      if (signal.rsi) {
-        message += `📊 RSI: ${signal.rsi.toFixed(1)}\n`;
-      }
-      
-      if (signal.volumeSpike) {
-        message += `🚀 VOLUMEN ALTO detectado\n`;
-      }
-      
+    // SEÑALES BUY
+    if (buySignals.length > 0) {
+      message += `🟢 *COMPRAR \\(${buySignals.length}\\)*\n`;
+      buySignals.forEach((signal, index) => {
+        message += `\n*${index + 1}\\. ${signal.coin}* 📈\n`;
+        message += `💰 $${this.formatPrice(signal.price)}\n`;
+        message += `🔥 ${signal.confidence}% confianza\n`;
+        message += `📝 ${this.escapeMarkdown(signal.reason)}\n`;
+        
+        if (signal.rsi) {
+          message += `📊 RSI: ${signal.rsi.toFixed(1)}`;
+          if (signal.rsi < 40) message += ` \\(OVERSOLD\\)`;
+          else if (signal.rsi > 70) message += ` \\(OVERBOUGHT\\)`;
+          message += `\n`;
+        }
+        
+        if (signal.volumeSpike) {
+          message += `🚀 VOLUMEN ALTO\n`;
+        }
+      });
       message += `\n`;
-    });
+    }
 
-    message += `⚠️ *GESTIÓN DE RIESGO PARA COMPRAS*\n`;
-    message += `• Stop\\-loss: \\-5% máximo\n`;
-    message += `• Take profit: \\+10\\-15%\n`;
-    message += `• Máximo 3\\-5% del capital por trade\n`;
-    message += `• Compra escalonada si baja más\n`;
-    message += `• DYOR \\- Solo análisis técnico\n\n`;
+    // SEÑALES SELL
+    if (sellSignals.length > 0) {
+      message += `🔴 *VENDER \\(${sellSignals.length}\\)*\n`;
+      sellSignals.forEach((signal, index) => {
+        message += `\n*${index + 1}\\. ${signal.coin}* 📉\n`;
+        message += `💰 $${this.formatPrice(signal.price)}\n`;
+        message += `🔥 ${signal.confidence}% confianza\n`;
+        message += `📝 ${this.escapeMarkdown(signal.reason)}\n`;
+        
+        if (signal.rsi) {
+          message += `📊 RSI: ${signal.rsi.toFixed(1)}`;
+          if (signal.rsi < 40) message += ` \\(OVERSOLD\\)`;
+          else if (signal.rsi > 70) message += ` \\(OVERBOUGHT\\)`;
+          message += `\n`;
+        }
+        
+        if (signal.volumeSpike) {
+          message += `⚠️ VENTA CON VOLUMEN\n`;
+        }
+      });
+      message += `\n`;
+    }
+
+    // SEÑALES HOLD
+    if (holdSignals.length > 0) {
+      message += `🟡 *MANTENER \\(${holdSignals.length}\\)*\n`;
+      holdSignals.forEach((signal, index) => {
+        message += `\n*${index + 1}\\. ${signal.coin}* ⚖️\n`;
+        message += `💰 $${this.formatPrice(signal.price)}\n`;
+        message += `🔥 ${signal.confidence}% confianza\n`;
+        message += `📝 ${this.escapeMarkdown(signal.reason)}\n`;
+        
+        if (signal.rsi) {
+          message += `📊 RSI: ${signal.rsi.toFixed(1)} \\(NEUTRAL\\)\n`;
+        }
+        
+        if (signal.volumeSpike) {
+          message += `📊 ACUMULACIÓN DETECTADA\n`;
+        }
+      });
+      message += `\n`;
+    }
+
+    message += `⚠️ *GESTIÓN DE RIESGO*\n`;
+    message += `🟢 *Compras*: Stop\\-loss \\-5%, Take profit \\+15%\n`;
+    message += `🔴 *Ventas*: Tomar ganancias gradualmente\n`;
+    message += `🟡 *Hold*: Esperar confirmación de breakout\n`;
+    message += `💡 Máximo 3\\-5% del capital por trade\n\n`;
     message += `🔄 Próximo análisis en 5 minutos\n`;
     message += `🌐 Dashboard: https://xictorlrbot\\.com`;
 
     return message;
+  }
+
+  private escapeMarkdown(text: string): string {
+    // Escape special Markdown characters for Telegram
+    return text
+      .replace(/\./g, '\\.')
+      .replace(/\-/g, '\\-')
+      .replace(/\+/g, '\\+')
+      .replace(/\(/g, '\\(')
+      .replace(/\)/g, '\\)')
+      .replace(/\%/g, '\\%');
   }
 
   private formatPrice(price: number): string {
