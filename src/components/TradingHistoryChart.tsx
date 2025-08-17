@@ -25,6 +25,8 @@ export default function TradingHistoryChart() {
         // Import supabase client
         const { supabase } = await import('../lib/supabase');
         
+        console.log('🔄 Fetching trading history from database...');
+        
         // Fetch recent trading actions (last 24 hours)
         const { data: actionsData, error: actionsError } = await supabase
           .from('trading_actions')
@@ -37,6 +39,7 @@ export default function TradingHistoryChart() {
           console.error('Error fetching trading actions:', actionsError);
           setActions([]);
         } else {
+          console.log(`✅ Fetched ${actionsData?.length || 0} trading actions from database`);
           setActions(actionsData || []);
         }
 
@@ -44,7 +47,6 @@ export default function TradingHistoryChart() {
         const { data: performanceData, error: performanceError } = await supabase
           .from('trading_performance')
           .select('*')
-          .is('user_id', null) // Get general performance data (no user_id)
           .order('created_at', { ascending: false })
           .limit(50);
 
@@ -52,6 +54,7 @@ export default function TradingHistoryChart() {
           console.error('Error fetching trading performance:', performanceError);
           setPerformance([]);
         } else {
+          console.log(`✅ Fetched ${performanceData?.length || 0} performance records from database`);
           setPerformance(performanceData || []);
           calculateStats(performanceData || []);
         }
@@ -59,14 +62,6 @@ export default function TradingHistoryChart() {
         console.error('Error fetching trading history:', error);
         setActions([]);
         setPerformance([]);
-        setStats({
-          totalTrades: 0,
-          winRate: 0,
-          totalProfit: 0,
-          avgDuration: 0,
-          bestTrade: 0,
-          worstTrade: 0
-        });
       } finally {
         setLoading(false);
       }
@@ -76,6 +71,7 @@ export default function TradingHistoryChart() {
       const closedTrades = performanceData.filter(trade => trade.status === 'closed');
       
       if (closedTrades.length === 0) {
+        console.log('📊 No closed trades found for stats calculation');
         setStats({
           totalTrades: 0,
           winRate: 0,
@@ -93,6 +89,8 @@ export default function TradingHistoryChart() {
       const bestTrade = Math.max(...closedTrades.map(trade => trade.profit_loss_percentage));
       const worstTrade = Math.min(...closedTrades.map(trade => trade.profit_loss_percentage));
 
+      console.log(`📊 Stats calculated: ${closedTrades.length} trades, ${winningTrades.length} wins, ${((winningTrades.length / closedTrades.length) * 100).toFixed(1)}% win rate`);
+      
       setStats({
         totalTrades: closedTrades.length,
         winRate: (winningTrades.length / closedTrades.length) * 100,
