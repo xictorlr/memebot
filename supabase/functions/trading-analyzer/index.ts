@@ -23,8 +23,9 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-requested-with',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Max-Age': '86400',
 }
 
 interface MemecoinData {
@@ -516,7 +517,7 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     console.log('🔧 Handling CORS preflight request');
     return new Response('ok', {
-      status: 200,
+      status: 204,
       headers: corsHeaders
     });
   }
