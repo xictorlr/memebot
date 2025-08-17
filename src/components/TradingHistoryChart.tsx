@@ -14,6 +14,7 @@ export default function TradingHistoryChart() {
   });
   const [loading, setLoading] = useState(false);
   const [timeframe, setTimeframe] = useState<'1h' | '6h' | '24h'>('24h');
+  const [actionFilter, setActionFilter] = useState<'all' | 'buy' | 'sell' | 'hold'>('all');
 
   // Fetch data from Supabase
   React.useEffect(() => {
@@ -128,6 +129,10 @@ export default function TradingHistoryChart() {
     sell: filteredActions.filter(a => a.action === 'sell').length,
     hold: filteredActions.filter(a => a.action === 'hold').length
   };
+
+  const displayedActions = actionFilter === 'all' 
+    ? filteredActions.slice(0, 15)
+    : filteredActions.filter(a => a.action === actionFilter).slice(0, 15);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('es-ES', {
@@ -246,15 +251,68 @@ export default function TradingHistoryChart() {
 
         {/* Recent Actions */}
         <div>
-          <h3 className="font-semibold text-white mb-3">Acciones Recientes</h3>
+          <h3 className="font-semibold text-white mb-3 flex items-center space-x-2">
+            <span>Historial de Señales</span>
+            <span className="text-sm text-gray-400">({timeframe})</span>
+          </h3>
+          
+          {/* Action Type Filter */}
+          <div className="flex space-x-2 mb-4">
+            <button
+              onClick={() => setActionFilter('all')}
+              className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                actionFilter === 'all'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              }`}
+            >
+              Todas ({filteredActions.length})
+            </button>
+            <button
+              onClick={() => setActionFilter('buy')}
+              className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                actionFilter === 'buy'
+                  ? 'bg-green-600 text-white'
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              }`}
+            >
+              BUY ({actionCounts.buy})
+            </button>
+            <button
+              onClick={() => setActionFilter('sell')}
+              className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                actionFilter === 'sell'
+                  ? 'bg-red-600 text-white'
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              }`}
+            >
+              SELL ({actionCounts.sell})
+            </button>
+            <button
+              onClick={() => setActionFilter('hold')}
+              className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                actionFilter === 'hold'
+                  ? 'bg-yellow-600 text-white'
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              }`}
+            >
+              HOLD ({actionCounts.hold})
+            </button>
+          </div>
+          
           <div className="space-y-2 max-h-60 overflow-y-auto">
-            {filteredActions.length === 0 ? (
+            {displayedActions.length === 0 ? (
               <div className="text-center py-8">
                 <Clock className="h-12 w-12 text-gray-600 mx-auto mb-4" />
-                <p className="text-gray-400">No hay acciones en este período</p>
+                <p className="text-gray-400">
+                  {actionFilter === 'all' 
+                    ? 'No hay señales en este período' 
+                    : `No hay señales ${actionFilter.toUpperCase()} en este período`
+                  }
+                </p>
               </div>
             ) : (
-              filteredActions.slice(0, 10).map((action) => (
+              displayedActions.map((action) => (
                 <div key={action.id} className={`p-3 rounded-lg border-l-4 ${
                   action.action === 'buy' ? 'border-l-green-500 bg-green-500/5' :
                   action.action === 'sell' ? 'border-l-red-500 bg-red-500/5' :
@@ -271,19 +329,42 @@ export default function TradingHistoryChart() {
                       )}
                       
                       <div>
-                        <p className="font-semibold text-white">
-                          {action.action.toUpperCase()} {action.symbol}
+                        <div className="flex items-center space-x-2">
+                          <p className={`font-semibold ${
+                            action.action === 'buy' ? 'text-green-400' :
+                            action.action === 'sell' ? 'text-red-400' :
+                            'text-yellow-400'
+                          }`}>
+                            {action.action === 'buy' ? '🟢 COMPRAR' :
+                             action.action === 'sell' ? '🔴 VENDER' :
+                             '🟡 MANTENER'} {action.symbol}
+                          </p>
+                          <span className={`text-xs px-2 py-1 rounded-full ${
+                            action.confidence >= 80 ? 'bg-green-500/20 text-green-400' :
+                            action.confidence >= 70 ? 'bg-yellow-500/20 text-yellow-400' :
+                            'bg-gray-500/20 text-gray-400'
+                          }`}>
+                            {action.confidence}%
+                          </span>
+                        </div>
+                        <p className="text-gray-300 text-sm mt-1 font-medium">
+                          📝 {action.reason}
                         </p>
-                        <p className="text-gray-400 text-sm">{action.reason}</p>
+                        {action.rsi && (
+                          <p className="text-gray-400 text-xs mt-1">
+                            📊 RSI: {action.rsi.toFixed(1)} 
+                            {action.volume_spike && ' • 🚀 Alto volumen'}
+                          </p>
+                        )}
                       </div>
                     </div>
                     
                     <div className="text-right">
-                      <p className="font-semibold text-white">
+                      <p className="font-semibold text-white text-lg">
                         ${action.price < 0.01 ? action.price.toFixed(6) : action.price.toFixed(4)}
                       </p>
-                      <p className="text-gray-400 text-sm">
-                        {action.confidence}% • {new Date(action.created_at).toLocaleTimeString()}
+                      <p className="text-gray-400 text-xs">
+                        {new Date(action.created_at).toLocaleTimeString()}
                       </p>
                     </div>
                   </div>

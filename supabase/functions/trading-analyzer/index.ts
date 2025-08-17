@@ -364,26 +364,29 @@ class TradingAnalyzer {
       minute: '2-digit'
     });
 
+    // Solo enviar señales BUY por Telegram
+    const buySignals = signals.filter(signal => signal.action === 'BUY');
+
     let message = `🤖 *MEMEBOT TRADING ALERT* 🤖\n`;
     message += `📅 ${timestamp}\n\n`;
 
-    if (signals.length === 0) {
+    if (buySignals.length === 0) {
       message += `⚠️ *SIN SEÑALES FUERTES*\n`;
-      message += `El mercado está en consolidación\\.\n`;
-      message += `Todas las coins están en rango lateral\\.\n\n`;
-      message += `💡 *Estrategia*: Esperar breakouts o usar DCA\\.`;
+      message += `No hay señales BUY fuertes en este momento\\.\n`;
+      message += `Esperando mejores oportunidades de entrada\\.\n\n`;
+      message += `💡 *Estrategia*: Mantén efectivo y espera dips\\.`;
       return message;
     }
 
-    message += `🎯 *${signals.length} SEÑALES DETECTADAS*\n\n`;
+    message += `🚀 *${buySignals.length} OPORTUNIDADES DE COMPRA*\n\n`;
 
-    signals.forEach((signal, index) => {
-      const emoji = signal.action === 'BUY' ? '🟢' : signal.action === 'SELL' ? '🔴' : '🟡';
-      const actionEmoji = signal.action === 'BUY' ? '📈' : signal.action === 'SELL' ? '📉' : '⏸️';
+    buySignals.forEach((signal, index) => {
+      const emoji = '🟢';
+      const actionEmoji = '📈';
       
-      message += `${emoji} *${index + 1}\\. ${signal.coin}* ${actionEmoji}\n`;
+      message += `${emoji} *${index + 1}\\. COMPRAR ${signal.coin}* ${actionEmoji}\n`;
       message += `💰 Precio: $${this.formatPrice(signal.price)}\n`;
-      message += `🎯 Acción: *${signal.action}*\n`;
+      message += `🎯 Acción: *COMPRAR AHORA*\n`;
       message += `🔥 Confianza: ${signal.confidence}%\n`;
       message += `📝 Razón: ${signal.reason}\n`;
       
@@ -398,10 +401,11 @@ class TradingAnalyzer {
       message += `\n`;
     });
 
-    message += `⚠️ *GESTIÓN DE RIESGO*\n`;
+    message += `⚠️ *GESTIÓN DE RIESGO PARA COMPRAS*\n`;
     message += `• Stop\\-loss: \\-5% máximo\n`;
     message += `• Take profit: \\+10\\-15%\n`;
     message += `• Máximo 3\\-5% del capital por trade\n`;
+    message += `• Compra escalonada si baja más\n`;
     message += `• DYOR \\- Solo análisis técnico\n\n`;
     message += `🔄 Próximo análisis en 5 minutos\n`;
     message += `🌐 Dashboard: https://xictorlrbot\\.com`;
