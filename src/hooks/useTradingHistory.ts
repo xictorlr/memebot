@@ -134,19 +134,15 @@ export function useTradingHistory() {
   };
 
   const saveAction = async (action: Omit<TradingAction, 'id' | 'created_at'>) => {
-    // Only save if user is authenticated
-    if (!user) {
-      console.log('User not authenticated, skipping action save');
-      return { error: new Error('User not authenticated') };
-    }
-
     try {
+      // Prepare the action data
+      const actionData = user 
+        ? { ...action, user_id: user.id }  // Add user_id if authenticated
+        : action;  // Allow system actions without user_id
+
       const { data, error } = await supabase
         .from('trading_actions')
-        .insert({
-          ...action,
-          user_id: user.id
-        })
+        .insert(actionData)
         .select()
         .single();
 
@@ -158,8 +154,10 @@ export function useTradingHistory() {
       // Update local state
       setActions(prev => [data, ...prev]);
       
-      // Check if we need to create or update performance tracking
-      await updatePerformanceTracking(action);
+      // Only track performance for authenticated users
+      if (user) {
+        await updatePerformanceTracking(action);
+      }
       
       return { data };
     } catch (error) {
