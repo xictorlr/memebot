@@ -5,9 +5,25 @@
  * Follow semantic versioning: MAJOR.MINOR.PATCH
  */
 
-export const APP_VERSION = '1.0.7';
+export const APP_VERSION = '1.0.8';
 
 export const VERSION_HISTORY = [
+  {
+    version: '1.0.8',
+    date: '2025-01-17',
+    changes: [
+      '🔒 Tokens de Telegram completamente eliminados del código fuente',
+      '🌍 Sistema 100% basado en variables de entorno para seguridad',
+      '📱 Mensajes de Telegram ahora usan datos reales y dinámicos',
+      '🎯 Señales generadas desde datos actuales de CoinGecko API',
+      '💾 Guardado automático de análisis reales en base de datos',
+      '🌐 Enlaces de redes sociales del desarrollador añadidos',
+      '⚙️ Configuración de Telegram mejorada con validación',
+      '🛡️ Sistema de fallback robusto para máxima estabilidad',
+      '📊 Análisis de mercado más preciso con datos en tiempo real',
+      '✨ Interfaz de usuario optimizada y más profesional'
+    ]
+  },
   {
     version: '1.0.7',
     date: '2025-01-17',
