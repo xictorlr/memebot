@@ -211,9 +211,6 @@ function App() {
               
               <div className="text-center">
                 <p className="text-gray-400 text-sm mb-2">
-                  🚀 Full Stack Developer especializado en Trading Bots y Fintech
-                </p>
-                <p className="text-gray-500 text-xs">
                   💡 ¿Necesitas un bot personalizado? ¡Contáctame!
                 </p>
               </div>
