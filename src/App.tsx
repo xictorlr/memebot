@@ -160,6 +160,65 @@ function App() {
               </div>
             </div>
             
+            {/* Social Media Links */}
+            <div className="mt-8 bg-gray-800 rounded-lg p-6">
+              <h4 className="font-semibold text-white mb-4 flex items-center justify-center space-x-2">
+                <span>👨‍💻</span>
+                <span>Desarrollado por Víctor López Rapado</span>
+              </h4>
+              
+              <div className="flex flex-wrap justify-center gap-4 mb-4">
+                <a
+                  href="https://xictorlr.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                >
+                  <span>🌐</span>
+                  <span>Mi Web</span>
+                </a>
+                
+                <a
+                  href="https://www.linkedin.com/in/victorlopezrapado/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center space-x-2 bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                >
+                  <span>💼</span>
+                  <span>LinkedIn</span>
+                </a>
+                
+                <a
+                  href="https://github.com/xictorlr"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center space-x-2 bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                >
+                  <span>⚡</span>
+                  <span>GitHub</span>
+                </a>
+                
+                <a
+                  href="https://www.instagram.com/stories/xictorlr/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center space-x-2 bg-pink-600 hover:bg-pink-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                >
+                  <span>📸</span>
+                  <span>Instagram</span>
+                </a>
+              </div>
+              
+              <div className="text-center">
+                <p className="text-gray-400 text-sm mb-2">
+                  🚀 Full Stack Developer especializado en Trading Bots y Fintech
+                </p>
+                <p className="text-gray-500 text-xs">
+                  💡 ¿Necesitas un bot personalizado? ¡Contáctame!
+                </p>
+              </div>
+            </div>
+            
             {!user && (
               <div className="mt-6 bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
                 <h4 className="font-semibold text-blue-400 mb-2">🚀 Funcionalidades Premium</h4>
