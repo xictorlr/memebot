@@ -269,8 +269,12 @@ async function saveSignalsToDatabase(supabase: any, signals: any[]) {
 
 async function sendTelegramMessage(signals: any[]): Promise<boolean> {
   try {
-    const TELEGRAM_BOT_TOKEN = '8486768601:AAF9_1rbGsJ-r7Zq-y4lnt08QeAxAOBVFG0';
-    const TELEGRAM_CHAT_ID = '5441177022';
+    // Get from environment variables or use default
+    const TELEGRAM_BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN') || '8486768601:AAF9_1rbGsJ-r7Zq-y4lnt08QeAxAOBVFG0';
+    const TELEGRAM_CHAT_ID = Deno.env.get('TELEGRAM_CHAT_ID') || '5441177022';
+    
+    console.log('📱 Using Telegram Bot Token:', TELEGRAM_BOT_TOKEN.substring(0, 10) + '...');
+    console.log('📱 Using Chat ID:', TELEGRAM_CHAT_ID);
     
     const timestamp = new Date().toLocaleString('es-ES', {
       timeZone: 'Europe/Madrid',

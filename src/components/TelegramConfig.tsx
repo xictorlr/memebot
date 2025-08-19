@@ -8,8 +8,8 @@ export default function TelegramConfig() {
   const { profile, updateProfile } = useUserProfile();
   
   const [config, setConfig] = useState({
-    botToken: '8486768601:AAF9_1rbGsJ-r7Zq-y4lnt08QeAxAOBVFG0',
-    chatId: '5441177022',
+    botToken: profile?.telegram_bot_token || '8486768601:AAF9_1rbGsJ-r7Zq-y4lnt08QeAxAOBVFG0',
+    chatId: profile?.telegram_chat_id || '5441177022',
     enabled: true,
     frequency: profile?.alert_frequency?.toString() || '5' // minutes
   });
@@ -21,8 +21,8 @@ export default function TelegramConfig() {
     if (profile) {
       setConfig(prev => ({
         ...prev,
-        botToken: '8486768601:AAF9_1rbGsJ-r7Zq-y4lnt08QeAxAOBVFG0',
-        chatId: '5441177022',
+        botToken: profile.telegram_bot_token || '8486768601:AAF9_1rbGsJ-r7Zq-y4lnt08QeAxAOBVFG0',
+        chatId: profile.telegram_chat_id || '5441177022',
         enabled: profile.alerts_enabled,
         frequency: profile.alert_frequency.toString()
       }));
@@ -111,13 +111,13 @@ export default function TelegramConfig() {
       
       // 1. Test directo del bot
       console.log('📱 Paso 1: Enviando mensaje de prueba directo...');
-      const directResponse = await fetch(`https://api.telegram.org/bot8486768601:AAF9_1rbGsJ-r7Zq-y4lnt08QeAxAOBVFG0/sendMessage`, {
+      const directResponse = await fetch(`https://api.telegram.org/bot${config.botToken}/sendMessage`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          chat_id: '5441177022',
+          chat_id: config.chatId,
           text: `🧪 TEST DIRECTO - ${new Date().toLocaleTimeString()}\n\n✅ Bot funcionando correctamente\n📊 Probando desde la web`,
           parse_mode: 'Markdown'
         })
