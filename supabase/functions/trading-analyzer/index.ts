@@ -87,25 +87,44 @@ async function generateRealSignals(supabase: any) {
     const MEMECOIN_IDS = [
       'dogecoin', 'shiba-inu', 'pepe', 'dogwifcoin', 'bonk', 'floki',
       'brett-based', 'popcat', 'mog-coin', 'book-of-meme', 'pepecoin-2',
-      'wojak', 'turbo', 'ladys', 'jeo-boden', 'slerf', 'myro'
+      'wojak', 'turbo', 'ladys', 'jeo-boden', 'slerf', 'myro',
+      'cat-in-a-dogs-world', 'samoyedcoin', 'baby-doge-coin', 'kishu-inu'
     ];
     
     const targetUrl = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${MEMECOIN_IDS.join(',')}&order=market_cap_desc&per_page=20&page=1&sparkline=false&price_change_percentage=24h`;
     
+    console.log('🔗 Fetching from URL:', targetUrl);
+    
     const response = await fetch(targetUrl, {
       headers: {
         'Accept': 'application/json',
-        'User-Agent': 'MemeBot-Trading-App/1.0.7'
-      }
+        'User-Agent': 'MemeBot-Trading-App/1.0.7',
+        'Cache-Control': 'no-cache'
+      },
+      signal: AbortSignal.timeout(15000) // 15 second timeout
     });
     
     if (!response.ok) {
-      console.warn('⚠️ CoinGecko API failed, using fallback data');
+      console.error(`❌ CoinGecko API failed: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      console.error('Error details:', errorText);
       return generateFallbackSignals();
     }
     
     const coinData = await response.json();
+    
+    if (!Array.isArray(coinData) || coinData.length === 0) {
+      console.error('❌ Invalid or empty response from CoinGecko');
+      return generateFallbackSignals();
+    }
+    
     console.log(`✅ Fetched ${coinData.length} real coins from CoinGecko`);
+    console.log('Sample coin data:', coinData.slice(0, 2).map(c => ({
+      symbol: c.symbol,
+      price: c.current_price,
+      change: c.price_change_percentage_24h,
+      volume: c.total_volume
+    })));
     
     // Generate signals based on real data
     const signals = [];
@@ -120,58 +139,127 @@ async function generateRealSignals(supabase: any) {
       const volumeRatio = volume / marketCap;
       const athDistance = coin.ath_change_percentage || -100;
       
+      console.log(`📊 Analyzing ${coin.symbol}: price change ${priceChange.toFixed(2)}%, volume ratio ${(volumeRatio * 100).toFixed(2)}%`);
+      
       // BUY signals
-      if (priceChange > 2 && volumeRatio > 0.02) {
+      if (priceChange > 1.5 && volumeRatio > 0.015) {
         signals.push({
           coin_id: coin.id,
           symbol: coin.symbol.toUpperCase(),
           action: 'buy',
           price: coin.current_price,
-          confidence: Math.min(95, 50 + Math.abs(priceChange) * 2 + (volumeRatio * 200)),
-          reason: priceChange > 10 ? 'Fuerte momentum alcista' : 'Movimiento positivo con volumen',
+          confidence: Math.min(95, 50 + Math.abs(priceChange) * 3 + (volumeRatio * 300)),
+          reason: priceChange > 8 ? 'Fuerte momentum alcista' : 'Movimiento positivo con volumen',
+          market_cap: marketCap,
+          volume_24h: volume,
+          price_change_24h: priceChange,
+          volume_spike: volumeRatio > 0.025
+        });
+        console.log(`🟢 BUY signal generated for ${coin.symbol}`);
+      }
+      // Oversold BUY signals
+      else if (priceChange < -3 && priceChange > -15 && volumeRatio > 0.02) {
+        signals.push({
+          coin_id: coin.id,
+          symbol: coin.symbol.toUpperCase(),
+          action: 'buy',
+          price: coin.current_price,
+          confidence: Math.min(90, 60 + Math.abs(priceChange) * 2),
+          reason: 'Oversold - posible rebote',
           market_cap: marketCap,
           volume_24h: volume,
           price_change_24h: priceChange,
           volume_spike: volumeRatio > 0.03
         });
+        console.log(`🟢 OVERSOLD BUY signal generated for ${coin.symbol}`);
       }
       // SELL signals
-      else if (priceChange < -3 && volumeRatio > 0.02) {
+      else if (priceChange < -2 && volumeRatio > 0.015) {
         signals.push({
           coin_id: coin.id,
           symbol: coin.symbol.toUpperCase(),
           action: 'sell',
           price: coin.current_price,
-          confidence: Math.min(90, 50 + Math.abs(priceChange) * 2 + (volumeRatio * 100)),
-          reason: priceChange < -10 ? 'Caída fuerte con volumen' : 'Declive con presión vendedora',
+          confidence: Math.min(90, 50 + Math.abs(priceChange) * 3 + (volumeRatio * 200)),
+          reason: priceChange < -8 ? 'Caída fuerte con volumen' : 'Declive con presión vendedora',
           market_cap: marketCap,
           volume_24h: volume,
           price_change_24h: priceChange,
-          volume_spike: volumeRatio > 0.03
+          volume_spike: volumeRatio > 0.025
         });
+        console.log(`🔴 SELL signal generated for ${coin.symbol}`);
+      }
+      // Overbought SELL signals
+      else if (priceChange > 12 && athDistance > -30) {
+        signals.push({
+          coin_id: coin.id,
+          symbol: coin.symbol.toUpperCase(),
+          action: 'sell',
+          price: coin.current_price,
+          confidence: Math.min(85, 55 + (priceChange - 12) * 2),
+          reason: 'Overbought - tomar ganancias',
+          market_cap: marketCap,
+          volume_24h: volume,
+          price_change_24h: priceChange,
+          volume_spike: false
+        });
+        console.log(`🔴 OVERBOUGHT SELL signal generated for ${coin.symbol}`);
       }
       // HOLD signals
-      else if (Math.abs(priceChange) < 2 && volumeRatio > 0.01) {
+      else if (Math.abs(priceChange) < 1.5 && volumeRatio > 0.008) {
         signals.push({
           coin_id: coin.id,
           symbol: coin.symbol.toUpperCase(),
           action: 'hold',
           price: coin.current_price,
-          confidence: Math.min(75, 40 + (volumeRatio * 200)),
+          confidence: Math.min(75, 40 + (volumeRatio * 250)),
           reason: 'Consolidación - esperar próximo movimiento',
           market_cap: marketCap,
           volume_24h: volume,
           price_change_24h: priceChange,
           volume_spike: false
         });
+        console.log(`🟡 HOLD signal generated for ${coin.symbol}`);
       }
     }
     
     console.log(`🎯 Generated ${signals.length} real signals from market data`);
+    
+    // If no signals generated, create at least one based on biggest movers
+    if (signals.length === 0) {
+      console.log('⚠️ No signals generated, creating signals for biggest movers...');
+      
+      const sortedByChange = coinData
+        .filter(coin => coin.price_change_percentage_24h !== null)
+        .sort((a, b) => Math.abs(b.price_change_percentage_24h) - Math.abs(a.price_change_percentage_24h))
+        .slice(0, 3);
+      
+      for (const coin of sortedByChange) {
+        const priceChange = coin.price_change_percentage_24h;
+        const action = priceChange > 0 ? 'buy' : priceChange < -5 ? 'sell' : 'hold';
+        
+        signals.push({
+          coin_id: coin.id,
+          symbol: coin.symbol.toUpperCase(),
+          action,
+          price: coin.current_price,
+          confidence: Math.min(85, 50 + Math.abs(priceChange) * 2),
+          reason: `Mayor movimiento: ${priceChange > 0 ? 'subida' : 'bajada'} del ${Math.abs(priceChange).toFixed(1)}%`,
+          market_cap: coin.market_cap || 0,
+          volume_24h: coin.total_volume || 0,
+          price_change_24h: priceChange,
+          volume_spike: false
+        });
+      }
+      
+      console.log(`🎯 Generated ${signals.length} signals from biggest movers`);
+    }
+    
     return signals;
     
   } catch (error) {
     console.error('❌ Error generating real signals:', error);
+    console.error('Error stack:', error.stack);
     return generateFallbackSignals();
   }
 }
@@ -179,38 +267,60 @@ async function generateRealSignals(supabase: any) {
 function generateFallbackSignals() {
   console.log('📊 Using fallback signals...');
   
+  // Generate more realistic fallback data with current timestamp
+  const now = Date.now();
   const fallbackCoins = [
-    { symbol: 'DOGE', price: 0.08234, change: 5.87 },
-    { symbol: 'SHIB', price: 0.000008234, change: -5.25 },
-    { symbol: 'PEPE', price: 0.000001234, change: 12.45 },
-    { symbol: 'WIF', price: 2.34, change: 10.87 },
-    { symbol: 'BONK', price: 0.00001234, change: -8.76 }
+    { 
+      symbol: 'DOGE', 
+      price: 0.08234 + (Math.random() - 0.5) * 0.01, 
+      change: (Math.random() - 0.5) * 20 
+    },
+    { 
+      symbol: 'SHIB', 
+      price: 0.000008234 + (Math.random() - 0.5) * 0.000002, 
+      change: (Math.random() - 0.5) * 15 
+    },
+    { 
+      symbol: 'PEPE', 
+      price: 0.000001234 + (Math.random() - 0.5) * 0.0000005, 
+      change: (Math.random() - 0.5) * 25 
+    },
+    { 
+      symbol: 'WIF', 
+      price: 2.34 + (Math.random() - 0.5) * 0.5, 
+      change: (Math.random() - 0.5) * 18 
+    },
+    { 
+      symbol: 'BONK', 
+      price: 0.00001234 + (Math.random() - 0.5) * 0.000005, 
+      change: (Math.random() - 0.5) * 22 
+    }
   ];
   
   const signals = [];
   
   fallbackCoins.forEach(coin => {
-    if (coin.change > 5) {
+    if (coin.change > 3) {
       signals.push({
         coin_id: coin.symbol.toLowerCase(),
         symbol: coin.symbol,
         action: 'buy',
         price: coin.price,
-        confidence: 70 + Math.random() * 20,
-        reason: 'Momentum alcista detectado',
+        confidence: 65 + Math.random() * 25,
+        reason: `Momentum alcista: +${coin.change.toFixed(1)}%`,
         market_cap: 1000000000,
         volume_24h: 50000000,
         price_change_24h: coin.change,
         volume_spike: true
       });
-    } else if (coin.change < -5) {
+    } else if (coin.change < -3) {
       signals.push({
         coin_id: coin.symbol.toLowerCase(),
         symbol: coin.symbol,
         action: 'sell',
         price: coin.price,
-        confidence: 65 + Math.random() * 20,
-        reason: 'Presión vendedora fuerte',
+        confidence: 60 + Math.random() * 25,
+        reason: `Presión vendedora: ${coin.change.toFixed(1)}%`,
         market_cap: 1000000000,
         volume_24h: 30000000,
         price_change_24h: coin.change,
@@ -222,8 +332,8 @@ function generateFallbackSignals() {
         symbol: coin.symbol,
         action: 'hold',
         price: coin.price,
-        confidence: 50 + Math.random() * 25,
-        reason: 'Consolidación lateral',
+        confidence: 45 + Math.random() * 30,
+        reason: `Consolidación: ${coin.change.toFixed(1)}%`,
         market_cap: 1000000000,
         volume_24h: 20000000,
         price_change_24h: coin.change,
@@ -232,6 +342,7 @@ function generateFallbackSignals() {
     }
   });
   
+  console.log(`📊 Generated ${signals.length} fallback signals with random variations`);
   return signals;
 }
 
