@@ -8,8 +8,8 @@ export default function TelegramConfig() {
   const { profile, updateProfile } = useUserProfile();
   
   const [config, setConfig] = useState({
-    botToken: profile?.telegram_bot_token || '8486768601:AAF9_1rbGsJ-r7Zq-y4lnt08QeAxAOBVFG0',
-    chatId: profile?.telegram_chat_id || '5441177022',
+    botToken: profile?.telegram_bot_token || '',
+    chatId: profile?.telegram_chat_id || '',
     enabled: true,
     frequency: profile?.alert_frequency?.toString() || '5' // minutes
   });
@@ -21,8 +21,8 @@ export default function TelegramConfig() {
     if (profile) {
       setConfig(prev => ({
         ...prev,
-        botToken: profile.telegram_bot_token || '8486768601:AAF9_1rbGsJ-r7Zq-y4lnt08QeAxAOBVFG0',
-        chatId: profile.telegram_chat_id || '5441177022',
+        botToken: profile.telegram_bot_token || '',
+        chatId: profile.telegram_chat_id || '',
         enabled: profile.alerts_enabled,
         frequency: profile.alert_frequency.toString()
       }));
@@ -47,6 +47,12 @@ export default function TelegramConfig() {
 
   const handleTest = async () => {
     setTesting(true);
+    
+    if (!config.botToken || !config.chatId) {
+      alert('❌ Error: Debes configurar el Bot Token y Chat ID primero');
+      setTesting(false);
+      return;
+    }
     
     try {
       // Test both direct message and edge function
@@ -184,6 +190,40 @@ export default function TelegramConfig() {
         </div>
 
         <div className="space-y-6">
+          {/* Bot Token */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              🤖 Bot Token (de @BotFather)
+            </label>
+            <input
+              type="password"
+              value={config.botToken}
+              onChange={(e) => setConfig(prev => ({ ...prev, botToken: e.target.value }))}
+              className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
+              placeholder="1234567890:ABCdefGHIjklMNOpqrsTUVwxyz"
+            />
+            <p className="text-gray-400 text-xs mt-2">
+              💡 Obtén tu token hablando con @BotFather en Telegram
+            </p>
+          </div>
+
+          {/* Chat ID */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              💬 Chat ID
+            </label>
+            <input
+              type="text"
+              value={config.chatId}
+              onChange={(e) => setConfig(prev => ({ ...prev, chatId: e.target.value }))}
+              className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
+              placeholder="123456789"
+            />
+            <p className="text-gray-400 text-xs mt-2">
+              💡 Envía un mensaje a tu bot y usa @userinfobot para obtener tu Chat ID
+            </p>
+          </div>
+
           {/* Enable/Disable */}
           <div className="flex items-center justify-between p-4 bg-gray-700/30 rounded-lg">
             <div>
@@ -242,17 +282,20 @@ export default function TelegramConfig() {
           </div>
 
           {/* Status */}
-          <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+          <div className={`${config.botToken && config.chatId ? 'bg-green-500/10 border-green-500/20' : 'bg-yellow-500/10 border-yellow-500/20'} border rounded-lg p-4`}>
             <div className="flex items-center space-x-2">
-              <CheckCircle className="h-5 w-5 text-green-500" />
-              <span className="text-green-400 font-medium">
-                Bot @VictorLopezRapado_Alert_bot - Sistema de Alertas ACTIVO
+              <CheckCircle className={`h-5 w-5 ${config.botToken && config.chatId ? 'text-green-500' : 'text-yellow-500'}`} />
+              <span className={`font-medium ${config.botToken && config.chatId ? 'text-green-400' : 'text-yellow-400'}`}>
+                {config.botToken && config.chatId ? 'Bot Configurado - Sistema LISTO' : 'Configuración Pendiente'}
               </span>
             </div>
-            <p className="text-green-300 text-sm mt-2">
-              📱 Telegram: @VictorLopezRapado_Alert_bot • 🤖 GitHub Actions: Cada 5min • 📊 Análisis: Automático
+            <p className={`text-sm mt-2 ${config.botToken && config.chatId ? 'text-green-300' : 'text-yellow-300'}`}>
+              {config.botToken && config.chatId ? 
+                '📱 Bot Personal Configurado • 🤖 GitHub Actions: Cada 5min • 📊 Análisis: Automático' :
+                '⚠️ Configura tu Bot Token y Chat ID para recibir alertas personalizadas'
+              }
             </p>
-            <p className="text-green-200 text-xs mt-1">
+            <p className={`text-xs mt-1 ${config.botToken && config.chatId ? 'text-green-200' : 'text-yellow-200'}`}>
               💡 Usa el botón "Test Completo" para verificar que todo funciona correctamente
             </p>
           </div>
@@ -303,7 +346,7 @@ export default function TelegramConfig() {
             <button
               className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
               onClick={handleTest}
-              disabled={testing}
+              disabled={testing || !config.botToken || !config.chatId}
             >
               <TestTube className="h-4 w-4" />
               <span>{testing ? 'Enviando...' : 'Enviar Mensaje'}</span>
@@ -311,7 +354,7 @@ export default function TelegramConfig() {
             
             <button
               className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
-              disabled={testing}
+              disabled={testing || !config.botToken || !config.chatId}
               onClick={handleRunAnalysis}
             >
               <span>🔍</span>
